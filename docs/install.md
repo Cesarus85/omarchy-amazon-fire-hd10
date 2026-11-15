@@ -1,5 +1,8 @@
 # Installation and recovery
 
+For the experimental guided workflow, start with [installer.md](installer.md).
+This document explains the underlying steps and manual recovery boundaries.
+
 ## Reproduction boundaries
 
 The reference tablet was brought up incrementally, initially with Linux in an
@@ -8,12 +11,12 @@ then received camera, rotation, update and lock work. The published runtime
 and kernel sources represent the **final native-p18 system**, not every
 intermediate experiment.
 
-There is currently **no verified factory-to-Omarchy unattended installer**,
-no hosted Arch root image and no tested second-device migration. The source
-build, device-specific image construction and package staging are provided.
-Unlocking, provisioning a matching Arch/Omarchy userspace, migrating partitions
-and the first flash remain deliberate operator steps. Do not treat a checklist
-or a compiled image as proof that these steps have been validated on your unit.
+There is **no hardware-verified factory-to-Omarchy unattended installer**, no
+hosted Arch root image and no tested second-device migration. The guided
+installer automates provisioning, source builds and confirmed recovery writes
+for one strict stock layout. Unlocking remains a separate prerequisite.
+Do not treat a compiled image or passing source tests as proof of a successful
+installation on another unit.
 
 ## 1. Identify the tablet and establish recovery
 
@@ -81,8 +84,8 @@ boot/root contract; this repository's boot template cannot start it.
 Use recovery with all affected filesystems unmounted to perform an independently
 reviewed partition migration. A safe migration requires offline filesystem
 checks, verified copies if preserving existing Linux data, and comparison of
-protected partitions before/after. This source release intentionally does not
-ship a blanket repartition-and-flash command.
+protected partitions before/after. The guided installer validates both GPTs and
+the exact stock geometry; its checks must not be bypassed for other layouts.
 
 For a *new empty* Linux root, create ext4 only after identifying and authorizing
 the final p18 partition. Record its actual UUID and exact byte size in the
@@ -141,11 +144,10 @@ root/boot/recovery baseline and locally supplied firmware.
 
 The normal package-install/update hooks assume an already booted native target.
 They cannot validate the target board, kernel or boot hashes from a host chroot.
-For first installation, an operator must provision the payload and package
-database into the offline root with a reviewed bootstrap procedure; there is
-no tested automated bootstrap script in this release. Do not blindly run the
-normal live-system hooks inside the host chroot, and do not disable guards on
-an existing live installation to make a bootstrap attempt succeed.
+The installer bootstraps a **fresh offline root** by registering the platform
+package without live scriptlets, copying its payload, and enabling a required
+first-boot integrity/integration service. Do not run this bootstrap against an
+existing live system or disable its guards to make installation succeed.
 Post-install service operations also require systemd and the standard account.
 A bootstrap integration pass is required before enabling normal updates:
 `sudo trona-update-check repair`, then `sudo trona-update-check check`.
@@ -169,8 +171,8 @@ rootfs/modules/firmware/profile agree. Compare the written, padded partition
 hash with the generated manifest and confirm recovery is unchanged. Keep
 recovery accessible and do not overwrite preloader/LK/TEE/IDME partitions.
 
-No automatic flasher is supplied for this first installation. The included
-`trona-install-native-boot` is a guarded **later native-system boot updater**,
+The guided installer writes boot last and verifies the complete padded block
+contents. Separately, `trona-install-native-boot` is a guarded **later native-system boot updater**,
 not a stock-Android installer; it requires the expected native root and an
 explicit current-image baseline in its manifest.
 

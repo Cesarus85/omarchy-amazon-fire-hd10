@@ -50,8 +50,9 @@ Additional completed checks:
   firmware; verified all 123 payload-manifest entries, symlink and sudoers mode.
 - wvkbd patch application against the original v0.16 source archive.
 - ShellCheck on the new shell build/inspection scripts.
-- Gitleaks 8.30.1 source scan. The only exclusions are two exact upstream WLAN
-  enum identifiers, documented in .gitleaks.toml; no remaining findings.
+- Gitleaks 8.30.1 source scan. Exact exclusions cover two upstream WLAN enum
+  identifiers and the public Omarchy signing-key fingerprint, documented in
+  .gitleaks.toml; they are not credentials.
 
 The original QML keyboard fixture passed six tests on the configured tablet.
 The public CI runs portable source/profile/rotation/WLAN checks; it does not
@@ -68,3 +69,41 @@ A bit-identical core kernel/DTB does not guarantee that a differently provisione
 root filesystem, changed firmware, sensor revision, newly compiled module set
 or future package versions will behave identically. Physical acceptance and a
 working recovery route remain necessary.
+
+## Experimental installer validation (0.2)
+
+The installer was developed without accessing or modifying the reference tablet.
+Validation used generated device identity/GPT fixtures, a fresh official Arch
+ARM root in an ARM64 Docker volume, and privately supplied matching firmware.
+
+- 16 automated installer tests pass on Linux, including independent `sfdisk`
+  validation of a generated sparse 32-GB disk. They cover GPT CRC corruption,
+  valid-CRC wrong layouts, extra partitions, capacity mismatches, ambiguous ADB
+  selection, cancellation, protected-area/root readback failures, disconnects,
+  boot-last ordering and refusal to erase completed installs through resume.
+- Clean userspace provisioning installed signature-checked packages and matched
+  all seven qualified platform package versions. Repository-qualified names
+  select Arch's Hyprland and Omarchy's Quickshell deliberately.
+- The patched keyboard compiled in the fresh ARM64 root. The previously
+  reproduced kernel/DTB and all 28 modules were reused for integration testing;
+  the installer invokes those same source-build scripts for a normal build.
+- Offline platform packaging/bootstrap passed `pacman -Qkk trona-platform`:
+  **177 files, 0 altered files**. Sudoers syntax passed.
+- The generated 8-GiB ext4 filesystem passed all five `e2fsck -fn` phases.
+- The complete private fixture bundle was assembled inside a Linux Docker
+  volume, exported through the installer's actual copy path, then verified on
+  the Mac: compressed/decompressed SHA256, all 8,589,934,592 raw bytes, ext4 UUID
+  and size, boot/profile agreement and the protected GPT plan passed. Source/
+  input streaming into the volume was also exercised. Large writable host bind
+  mounts were removed after macOS shared-folder I/O errors during testing.
+- First-boot integration helpers passed in the offline root, including package
+  versions, platform file hashes, module vermagic, user configuration and the
+  checked touch/lock/menu patches. This test supplied a synthetic board marker
+  and selected the target kernel for `modinfo`; it did **not** pretend to test
+  hardware, boot-partition hashes or a running target kernel.
+
+The build was exercised and corrected in stages. This is not yet an unattended
+factory-to-desktop acceptance run on physical hardware. USB recovery writes,
+recovery-specific command behavior, first boot and physical touch/radio/standby
+acceptance still need a second, already unlocked 32-GB Trona. The installer
+therefore remains a prerelease with no universal binary image.

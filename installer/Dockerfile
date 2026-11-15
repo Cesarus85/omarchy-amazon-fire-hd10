@@ -1,0 +1,7 @@
+FROM ubuntu:24.04
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+ build-essential bc bison flex libssl-dev libelf-dev python3 curl xz-utils \
+ ca-certificates gcc-aarch64-linux-gnu patch git cpio file kmod device-tree-compiler \
+ busybox-static e2fsprogs libarchive-tools zstd \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /src

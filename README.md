@@ -5,7 +5,7 @@ codename Trona, MediaTek MT8183**. This is a community hardware port, running
 Linux directly on the tablet rather than inside Android.
 
 [Deutsch](docs/README.de.md) · [Hardware status](docs/hardware.md) ·
-[Build](docs/build.md) · [Installation](docs/install.md) ·
+[Guided installer](docs/installer.md) · [Build](docs/build.md) · [Installation details](docs/install.md) ·
 [Updates](docs/updates.md) · [Architecture](docs/architecture.md)
 
 ## What this project provides
@@ -20,12 +20,14 @@ Linux directly on the tablet rather than inside Android.
   customizations.
 - Build scripts, explicit per-device configuration, tests, troubleshooting and
   source/author credits.
+- An experimental guided clean installer: device checks, private firmware
+  extraction, ARM64 source/rootfs builds, device-bound images and verified writes.
 
-**This first publication is a source release for experienced Linux porters,
-not a one-command installer or a ready-to-flash system image.** The original
-tablet has been tested interactively; installing these exported sources on a
-second, factory-state tablet has not yet been tested. Read the
-[reproduction boundaries](docs/install.md#reproduction-boundaries) first.
+**The installer is experimental and requires an already unlocked, stock-layout
+32-GB Trona with TWRP.** It does not unlock tablets, support every Fire model,
+or provide a universal ready-to-flash image. The reference tablet has been
+tested interactively; the new clean installation sequence has not yet been
+boot-tested on a second tablet. Read the [installer requirements](docs/installer.md).
 
 ## Working on the reference tablet
 
@@ -52,15 +54,23 @@ not claimed complete. See [hardware.md](docs/hardware.md).
 
 ## Start here
 
-1. Check the exact model and [unlock/recovery prerequisites](docs/install.md).
-2. Read [what must stay private](docs/security.md), especially firmware calibration.
-3. [Build the kernel and modules](docs/build.md) without touching the tablet.
-4. Prepare a device-specific Arch ARM root filesystem, firmware and boot image.
-5. Follow the staged [installation and validation checklist](docs/install.md).
-6. Use the [guarded update process](docs/updates.md).
+With Python, ADB and ARM64-capable Docker installed:
 
-The build scripts only produce local files. They do not repartition or flash a
-connected device. The reference port ultimately removed Android system/vendor/data
+```sh
+./install.sh
+```
+
+The menu starts with a read-only requirements check, then offers preparation,
+building, verification and installation. **Only the final install step writes
+tablet storage, after an explicit erasure confirmation.** Follow the
+[step-by-step guide](docs/installer.md); keep [private inputs](docs/security.md)
+out of public reports. For source development, use the separate
+[kernel/module build guide](docs/build.md) and [installation details](docs/install.md).
+Existing users should use the [guarded update process](docs/updates.md), not
+the clean installer.
+
+The standalone build scripts only produce local files. The installer's final
+step removes Android system/vendor/data
 to give Linux about **28.93 GiB** of partition space on the 32-GB model, while
 preserving bootloader/firmware/recovery partitions. That migration is destructive;
 the old Android-loop boot layout and the final native-p18 layout are incompatible.
@@ -74,6 +84,7 @@ the old Android-loop boot layout and the final native-p18 layout are incompatibl
 | `platform/payload/` | Runtime scripts, units, UCM audio, camera, Hyprland and lock integration |
 | `boot/` | Device-profile initramfs template and shutdown helper |
 | `scripts/` | Kernel/module/boot builds, package staging, read-only diagnostics |
+| `installer/` | Guided wizard, strict GPT planner, clean root provisioning and image builder |
 | `userspace/wvkbd/` | Keyboard patch and native build recipe |
 | `tests/` | Source, profile, rotation and keyboard checks |
 | `docs/` | Installation, operation, limitations and implementation details |

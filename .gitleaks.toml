@@ -8,3 +8,8 @@ regexes = [
   '''^ENUM_ENCRYPTION1_KEY_ABSENT$''',
   '''^Ndis802_11Encryption1KeyAbsent$''',
 ]
+
+[[allowlists]]
+description = "Public Omarchy package-signing key fingerprint (not a credential)"
+regexTarget = "secret"
+regexes = ['''^40DFB630FF42BCFFB047046CF0134EE680CAC571$''']

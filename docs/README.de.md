@@ -15,12 +15,16 @@ Die ausführlichen technischen Anleitungen sind auf Englisch:
 5. [Sicherheit und private Daten](security.md)
 6. [Technischer Aufbau](architecture.md)
 
-**Die erste Veröffentlichung ist eine Quellcode-Version für erfahrene Anwender,
-kein fertiges Flash-Abbild und kein Ein-Klick-Installer.** Der ursprüngliche
-Port wurde auf einem Tablet getestet. Eine vollständige Neuinstallation dieses
-Exports auf einem zweiten Tablet ist noch nicht bestätigt.
+**Es gibt jetzt einen experimentellen geführten Installer**, gestartet mit
+`./install.sh`. Er prüft das Gerät, übernimmt die eigene Firmware, baut ein
+frisches ARM-System samt Treibern und installiert es nach ausdrücklicher
+Löschbestätigung. Die [Installer-Anleitung](installer.md) beschreibt alle Schritte.
+Voraussetzungen: bereits entsperrtes **32-GB-Trona**, originales Partitionslayout,
+TWRP 3.7.0_9-0, Python, ADB, ARM64-fähiges Docker und mindestens 25 GiB freier
+Build-Speicher. Das Entsperren wird nicht automatisiert. Eine vollständige
+Neuinstallation auf einem zweiten Tablet ist noch nicht am Gerät bestätigt.
 
-Die Build-Skripte greifen nicht auf ein angeschlossenes Tablet zu. Firmware,
+Die Build-Schritte greifen nicht auf ein angeschlossenes Tablet zu. Firmware,
 Kalibrierung, Zugangsdaten und Geräteabbilder sind bewusst nicht enthalten.
 Für ein eigenes Gerät werden eigene Firmware-Dateien, Root-UUID und
 Boot-/Recovery-Prüfsummen benötigt.
@@ -32,7 +36,10 @@ Firmware-Tiefschlaf und USB-A-Laden sind zurückgestellt. Andere USB-C-Netzteile
 Kopfhörerbuchse und Bluetooth-Audio brauchen eigene Tests.
 
 Der abschließende Speicherumbau hat Android entfernt und Linux etwa 28,93 GiB
-gegeben. Dieser Schritt ist destruktiv und wird nicht automatisch ausgeführt.
+gegeben. Der Installer bietet diesen destruktiven Schritt erst nach Prüfung und
+ausdrücklicher Bestätigung an. Android und interne Benutzerdaten werden gelöscht;
+die SD-Karte wird nicht beschrieben. Private Installer-Dateien gehören niemals
+in öffentliche Fehlerberichte oder Releases.
 Die vorherige Installation als Datei in Androids Datenpartition benötigt ein
 anderes Startabbild. Die Varianten dürfen nicht vermischt werden.
 

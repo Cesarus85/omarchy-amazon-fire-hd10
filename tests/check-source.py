@@ -9,7 +9,8 @@ profile={'ROOT_UUID':'11111111-2222-4333-8444-555555555555','ROOT_BYTES':'310588
  'BOOT_SHA256':'1'*64,'RECOVERY_SHA256':'2'*64,'SD_UUID':'NO-SD-CARD'}
 count=0
 for p in root.rglob('*'):
- if any(x in p.relative_to(root).parts for x in ['.git','local','build','dist','__pycache__']):continue
+ parts=p.relative_to(root).parts
+ if parts[0] in ['.git','local','build','dist'] or '__pycache__' in parts:continue
  if p.is_symlink():
   if not p.resolve().is_relative_to(root) or not p.resolve().exists():raise SystemExit('Unsafe/dangling symlink: '+str(p))
   continue

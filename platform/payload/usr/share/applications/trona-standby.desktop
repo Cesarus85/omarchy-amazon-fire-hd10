@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Standby
+Comment=Bildschirm ausschalten; auf Akku in den Schlafzustand wechseln
+Exec=/usr/local/libexec/trona-standby sleep
+Icon=system-suspend
+Terminal=false
+Categories=System;

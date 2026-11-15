@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Bildschirm drehen
+Comment=Zwischen Hochformat und Querformat wechseln
+Exec=/usr/local/bin/trona-rotate toggle
+Icon=object-rotate-right
+Terminal=false
+Categories=Settings;HardwareSettings;

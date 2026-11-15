@@ -1,0 +1,116 @@
+#!/usr/bin/python3
+"""Trona rotation policy: read only accelerometer/contact state, never input text."""
+import fcntl,json,math,os,pathlib,subprocess,sys,time
+STATE=pathlib.Path.home()/'.local/state/trona'
+ENABLED=STATE/'auto-rotate'
+STANDBY=pathlib.Path('/run/trona-standby/state.json')
+
+def enabled():
+ try:return ENABLED.read_text().strip()=='1'
+ except OSError:return False
+
+def set_enabled(value):
+ STATE.mkdir(parents=True,exist_ok=True)
+ temporary=STATE/('auto-rotate.'+str(os.getpid())+'.tmp')
+ content='1\n' if value else '0\n'
+ if not ENABLED.exists() or ENABLED.read_text()!=content:
+  temporary.write_text(content);temporary.replace(ENABLED)
+ # shell.json is watched by Omarchy; update only our button, without restarting it.
+ config=pathlib.Path.home()/'.config/omarchy/shell.json'
+ data=json.loads(config.read_text())
+ left=data['bar']['layout']['left']
+ item=next((x for x in left if x.get('id')=='trona.autorotate'),None)
+ if item is None:
+  item={'id':'trona.autorotate','type':'command','horizontalMargin':7,
+        'onClick':'/usr/local/bin/trona-auto-rotate toggle'}
+  index=next((i+1 for i,x in enumerate(left) if x.get('id')=='trona.rotation'),1)
+  left.insert(index,item)
+ item['text']='Auto: an' if value else 'Auto: aus'
+ item['tooltip']='Automatische Drehung aktiv – tippen zum Sperren' if value else 'Drehung gesperrt – tippen für automatische Drehung'
+ for x in left:
+  if x.get('id')=='trona.rotation':x['tooltip']='Manuell drehen und automatische Drehung sperren'
+ temporary=config.with_name('shell.json.'+str(os.getpid())+'.tmp')
+ content=json.dumps(data,ensure_ascii=False,indent=2)+'\n'
+ if config.read_text()!=content:
+  temporary.write_text(content);temporary.replace(config)
+
+def classify(vector):
+ x,y,z=vector
+ gravity=math.sqrt(x*x+y*y+z*z)
+ if not 7.0<=gravity<=12.8 or abs(z)>8.0:return None
+ if abs(y)>=6.5 and abs(x)<abs(y)*.60:return 0 if y>0 else 2
+ if abs(x)>=6.5 and abs(y)<abs(x)*.60:return 1 if x<0 else 3
+ return None
+
+class Stability:
+ def __init__(self):self.candidate=None;self.since=0;self.last_change=-10
+ def reset(self):self.candidate=None;self.since=0
+ def update(self,target,now,blocked=False):
+  if blocked or target is None:self.reset();return None
+  if target!=self.candidate:self.candidate=target;self.since=now;return None
+  if now-self.since<.8 or now-self.last_change<2:return None
+  return target
+ def applied(self,now):self.last_change=now;self.reset()
+
+class Touch:
+ def __init__(self):self.fd=None
+ def active(self):
+  if self.fd is None:
+   for name in pathlib.Path('/sys/class/input').glob('event*/device/name'):
+    if 'ft5x06' in name.read_text():
+     self.fd=os.open('/dev/input/'+name.parents[1].name,os.O_RDONLY|os.O_NONBLOCK)
+     break
+  if self.fd is None:raise OSError('Touchscreen unavailable; rotation paused')
+  keys=bytearray(96)
+  fcntl.ioctl(self.fd,0x80604518,keys,True) # EVIOCGKEY(96), no event stream consumed.
+  return bool(keys[330//8] & (1<<(330%8))) # BTN_TOUCH only.
+
+class Sensor:
+ def __init__(self):
+  self.path=next(p.parent for p in pathlib.Path('/sys/bus/iio/devices').glob('iio:*/name') if p.read_text().strip()=='stk8ba53')
+  self.scale=float((self.path/'in_accel_scale').read_text())
+  text=(self.path/'in_mount_matrix').read_text()
+  self.matrix=[float(x.strip()) for x in text.replace(';',',').split(',')]
+  if len(self.matrix)!=9:raise ValueError('Invalid accelerometer mount matrix')
+ def read(self):
+  raw=[int((self.path/('in_accel_'+a+'_raw')).read_text())*self.scale for a in 'xyz']
+  return tuple(sum(self.matrix[i*3+j]*raw[j] for j in range(3)) for i in range(3))
+
+def awake():
+ try:return json.loads(STANDBY.read_text()).get('state')=='awake'
+ except (OSError,ValueError):return False
+
+def daemon():
+ sensor=None;touch=Touch();stable=Stability();last_error=0
+ while True:
+  try:
+   if not enabled() or not awake():stable.reset();time.sleep(.5);continue
+   if sensor is None:sensor=Sensor()
+   now=time.monotonic()
+   target=stable.update(classify(sensor.read()),now,touch.active())
+   if target is not None:
+    current=int((STATE/'orientation').read_text())
+    if target!=current:
+     result=subprocess.run(['/usr/local/bin/trona-rotate','auto:'+str(target)],capture_output=True,text=True,timeout=18)
+     if result.returncode:raise RuntimeError(result.stderr.strip())
+     print(result.stdout.strip(),flush=True)
+     stable.applied(time.monotonic())
+   time.sleep(.2)
+  except (OSError,ValueError,StopIteration,RuntimeError,subprocess.SubprocessError) as error:
+   stable.reset();sensor=None
+   if time.monotonic()-last_error>30:print('Rotation paused: '+str(error),file=sys.stderr,flush=True);last_error=time.monotonic()
+   time.sleep(2)
+
+def main():
+ action=sys.argv[1] if len(sys.argv)>1 else 'toggle'
+ if action=='daemon':daemon();return
+ if action=='status':
+  print(json.dumps({'enabled':enabled(),'awake':awake(),'orientation':(STATE/'orientation').read_text().strip()}));return
+ if action not in ('toggle','lock','unlock'):raise ValueError('Use toggle, lock, unlock, status or daemon')
+ runtime=pathlib.Path(os.environ['XDG_RUNTIME_DIR'])
+ with (runtime/'trona-auto-rotate-control.lock').open('w') as guard:
+  fcntl.flock(guard,fcntl.LOCK_EX)
+  set_enabled(not enabled() if action=='toggle' else action=='unlock')
+ print(json.dumps({'automatic_rotation':enabled()}))
+
+if __name__=='__main__':main()

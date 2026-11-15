@@ -1,0 +1,20 @@
+#!/usr/bin/python3
+"""Keep Omarchy panels below Trona's external overlay-layer keyboard."""
+from pathlib import Path
+
+board = Path('/sys/firmware/devicetree/base/compatible').read_bytes()
+if b'amazon,trona\0' not in board:
+    raise SystemExit('This adjustment is restricted to Amazon Trona')
+path = Path('/usr/share/omarchy/shell/Ui/KeyboardPanel.qml')
+source = path.read_text()
+old = 'WlrLayershell.layer: WlrLayer.Overlay'
+new = 'WlrLayershell.layer: WlrLayer.Top'
+if old not in source and source.count(new) == 2:
+    raise SystemExit(0)
+if source.count(old) != 2 or source.count('omarchy-keyboard-panel') != 2:
+    raise SystemExit('Omarchy panel structure changed: review keyboard layering before patching')
+source = source.replace(old, new)
+source = source.replace('  WlrLayershell.namespace: "omarchy-keyboard-panel"',
+    '  // Trona: keep the overlay-layer touch keyboard above the panel.\n'
+    '  WlrLayershell.namespace: "omarchy-keyboard-panel"')
+path.write_text(source)

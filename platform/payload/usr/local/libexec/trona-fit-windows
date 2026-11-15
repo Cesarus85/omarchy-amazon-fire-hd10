@@ -1,0 +1,43 @@
+#!/usr/bin/python3
+"""Clamp floating windows to the panel work area; sleep until compositor events."""
+import json,os,pathlib,socket,subprocess,sys,time
+
+def hypr(*args):
+ return subprocess.check_output(['/usr/bin/hyprctl','-i','0',*args],text=True,timeout=5)
+def fit():
+ monitors={m['id']:m for m in json.loads(hypr('-j','monitors'))}
+ for w in json.loads(hypr('-j','clients')):
+  if not w['mapped'] or not w['floating'] or w['fullscreen'] or w['monitor'] not in monitors:continue
+  m=monitors[w['monitor']]
+  if m['name']!='DSI-1':continue
+  pw,ph=m['width'],m['height']
+  if m['transform']%2:pw,ph=ph,pw
+  l,t,r,b=m['reserved'];pad=12
+  x0=m['x']+l+pad;y0=m['y']+t+pad
+  mw=max(100,int(pw/m['scale']-l-r-2*pad));mh=max(100,int(ph/m['scale']-t-b-2*pad))
+  width,height=min(w['size'][0],mw),min(w['size'][1],mh)
+  x=max(x0,min(w['at'][0],x0+mw-width));y=max(y0,min(w['at'][1],y0+mh-height))
+  target=json.dumps('address:'+w['address']); commands=[]
+  if [width,height]!=w['size']:commands.append(f'hl.dispatch(hl.dsp.window.resize({{x={width},y={height},relative=false,window={target}}}))')
+  if [x,y]!=w['at']:commands.append(f'hl.dispatch(hl.dsp.window.move({{x={x},y={y},relative=false,window={target}}}))')
+  if commands:hypr('eval','; '.join(commands))
+
+def main():
+ if '--once' in sys.argv:fit();return
+ runtime=pathlib.Path(os.environ['XDG_RUNTIME_DIR'])/'hypr'
+ candidates=list(runtime.glob('*/.socket2.sock'))
+ if len(candidates)!=1:raise RuntimeError('Expected one compositor')
+ sock=socket.socket(socket.AF_UNIX);sock.connect(str(candidates[0]))
+ # UWSM can announce readiness before Hyprland answers its command socket.
+ # Keep the event connection and retry on the next compositor event.
+ ready=False
+ try:fit();ready=True
+ except (subprocess.SubprocessError,ValueError,KeyError):pass
+ events={'openwindow','changefloatingmode','configreloaded','monitoraddedv2','openlayer','closelayer','movewindowv2'}
+ for line in sock.makefile():
+  if not ready or line.partition('>>')[0] in events:
+   time.sleep(.15) # one-shot settle for the triggering layout change
+   try:fit();ready=True
+   except (subprocess.SubprocessError,ValueError,KeyError) as e:
+    if ready:print(e,file=sys.stderr,flush=True)
+if __name__=='__main__':main()

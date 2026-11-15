@@ -1,0 +1,19 @@
+#!/bin/busybox sh
+export PATH=/bin
+/bin/busybox --install -s /bin
+exec >/dev/console 2>&1
+echo 'TRONA_SHUTDOWN: exitrd reached' >/dev/kmsg
+mkdir -p /hostdata
+# systemd may move busy mounts into /run/shutdown/mounts before exitrd.
+backing=$(awk '$1 == "/dev/mmcblk0p21" {print $2; exit}' /proc/mounts)
+if [ -n "$backing" ]; then mount --move "$backing" /hostdata; fi
+sync
+awk '$2 ~ /^\/oldroot\// { print $2 }' /proc/mounts | sort -r | while read m; do umount "$m" 2>/dev/null; done
+if umount /oldroot; then echo 'TRONA_SHUTDOWN: root cleanly unmounted' >/dev/kmsg; else mount -o remount,ro /oldroot; fi
+[ -z "$backing" ] || losetup -d /dev/loop0 2>/dev/null
+sync
+if [ -n "$backing" ]; then
+ if umount /hostdata; then echo 'TRONA_SHUTDOWN: backing ext4 cleanly unmounted' >/dev/kmsg; else mount -o remount,ro /hostdata; fi
+fi
+sync
+case "$1" in poweroff|halt) poweroff -f;; *) reboot -f;; esac

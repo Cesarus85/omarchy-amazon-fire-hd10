@@ -1,0 +1,11 @@
+[Unit]
+Description=Verify native Trona boot, drivers and tablet integration
+After=local-fs.target
+Before=trona-desktop.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/trona-update-check boot
+RemainAfterExit=yes
+TimeoutStartSec=60
+[Install]
+WantedBy=multi-user.target

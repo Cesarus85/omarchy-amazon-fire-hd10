@@ -1,0 +1,15 @@
+[Unit]
+Description=Trona power-button, screen idle and suspend-to-idle
+After=trona-desktop.service trona-wifi.service bluetooth.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/trona-standby daemon
+ExecStopPost=/usr/local/libexec/trona-standby recover
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=70
+Environment=TRONA_IDLE_SECONDS=300
+
+[Install]
+WantedBy=multi-user.target

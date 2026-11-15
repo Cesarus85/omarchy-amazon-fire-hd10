@@ -1,0 +1,12 @@
+[Unit]
+Description=Trona bounded frequency-only CPU policy
+After=systemd-modules-load.service
+Before=trona-desktop.service
+ConditionPathExists=/sys/devices/system/cpu/cpufreq/policy0
+ConditionPathExists=/usr/lib/modules/%v/extra/trona_cpufreq_policy.ko
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/modprobe trona_cpufreq_policy
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

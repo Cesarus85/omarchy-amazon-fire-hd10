@@ -1,0 +1,95 @@
+#!/usr/bin/python3
+"""Rotate the panel and touch together, with persistent state and verification."""
+import fcntl,json,os,pathlib,subprocess,sys,time
+
+OUTPUT='DSI-1'
+def run(*args):
+ p=subprocess.run(args,capture_output=True,text=True,timeout=12)
+ if p.returncode:raise RuntimeError(p.stderr.strip() or p.stdout.strip() or args[0])
+ return p.stdout
+def hypr(*args):return run('/usr/bin/hyprctl',*args)
+def monitor():return next(m for m in json.loads(hypr('-j','monitors')) if m['name']==OUTPUT)
+def layers():
+ data=json.loads(hypr('-j','layers'))[OUTPUT]['levels']
+ return [x for group in data.values() for x in group]
+def apply(transform):
+ m=monitor()
+ # Hyprland 0.57.2's soft transform update omits modeChanged, leaving an
+ # existing ext-session-lock surface at its old size. Reapply the SAME native
+ # mode explicitly, then restore "preferred": both use the existing panel
+ # timing, but the hard rule path sends the required lock-surface configure.
+ # Never unlock/relock, restart the locker, or alter the display scale.
+ native=str(m['width'])+'x'+str(m['height'])+'@'+str(m['refreshRate'])
+ for mode in (native, 'preferred'):
+  hypr('eval','hl.config({input={touchdevice={output="DSI-1",transform='+str(transform)+'}}}); hl.monitor({output="DSI-1",mode="'+mode+'",position="auto",scale='+str(m['scale'])+',transform='+str(transform)+'})')
+  # Monitor rules apply on the compositor event loop; keep the requests apart.
+  time.sleep(.12)
+def check(transform,keyboard_visible):
+ m=monitor()
+ if m['transform']!=transform:return False
+ if json.loads(hypr('-j','getoption','input:touchdevice:transform'))['int']!=transform:return False
+ if json.loads(hypr('-j','getoption','input:touchdevice:output'))['str']!=OUTPUT:return False
+ w,h=m['width'],m['height']
+ if transform%2:w,h=h,w
+ w,h=round(w/m['scale']),round(h/m['scale'])
+ ls=layers()
+ bar=next((x for x in ls if x['namespace']=='omarchy-bar'),None)
+ if not bar or bar['w']!=w or bar['h']!=h:return False
+ if keyboard_visible:
+  kbd=next((x for x in ls if x['namespace']=='wlroots'),None)
+  kh=200 if transform%2 else 280
+  if not kbd or (kbd['x'],kbd['y'],kbd['w'],kbd['h'])!=(0,h-kh,w,kh):return False
+ elif any(x['namespace']=='wlroots' for x in ls):return False
+ return True
+
+def main():
+ if os.getuid()==0:raise RuntimeError('Run inside the tablet desktop as trona')
+ if b'amazon,trona\0' not in pathlib.Path('/sys/firmware/devicetree/base/compatible').read_bytes():
+  raise RuntimeError('This control is for the Trona tablet')
+ os.environ['PATH']='/usr/share/omarchy/bin:/usr/local/bin:/usr/bin'
+ action=sys.argv[1] if len(sys.argv)>1 else 'toggle'
+ automatic=action in ['auto:'+str(x) for x in range(4)]
+ if not automatic and action not in ['toggle','portrait','landscape','portrait-inverted','landscape-inverted','status']:raise RuntimeError('Unknown rotation action')
+ runtime=pathlib.Path(os.environ['XDG_RUNTIME_DIR'])
+ if not os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'):
+  sockets=list((runtime/'hypr').glob('*/.socket.sock'))
+  if len(sockets)!=1:raise RuntimeError('No unique Hyprland session found')
+  os.environ['HYPRLAND_INSTANCE_SIGNATURE']=sockets[0].parent.name
+ with (runtime/'trona-rotation.lock').open('w') as lock:
+  try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+  except BlockingIOError:return
+  m=monitor()
+  old=m['transform']
+  if action=='status':print(json.dumps({'transform':old,'orientation':'landscape' if old%2 else 'portrait'}));return
+  if automatic:
+   state=pathlib.Path.home()/'.local/state/trona/auto-rotate'
+   awake=json.loads(pathlib.Path('/run/trona-standby/state.json').read_text()).get('state')=='awake'
+   if not state.exists() or state.read_text().strip()!='1' or not awake or not m['dpmsStatus']:
+    print(json.dumps({'skipped':'rotation locked or display asleep'}));return
+  else:
+   run('/usr/local/bin/trona-auto-rotate','lock')
+   if not m['dpmsStatus']:run('/usr/local/libexec/trona-standby','wake')
+  stamp=runtime/'trona-rotation.last'
+  if action=='toggle' and stamp.exists() and time.monotonic()-float(stamp.read_text())<.8:return
+  target=int(action[-1]) if automatic else {'portrait':0,'landscape':1,'portrait-inverted':2,'landscape-inverted':3}.get(action,0 if old%2 else 1)
+  visible=any(x['namespace']=='wlroots' for x in layers())
+  try:
+   apply(target)
+   until=time.monotonic()+12
+   while not check(target,visible):
+    if time.monotonic()>until:raise RuntimeError('Display, touch or panel geometry did not settle')
+    time.sleep(.15)
+   state=pathlib.Path.home()/'.local/state/trona/orientation'
+   state.parent.mkdir(parents=True,exist_ok=True)
+   tmp=state.with_suffix('.tmp');tmp.write_text(str(target)+'\n');tmp.replace(state)
+   stamp.write_text(str(time.monotonic()))
+   print(json.dumps({'orientation':'landscape' if target%2 else 'portrait','transform':target,'verified':True}))
+  except Exception:
+   apply(old)
+   raise
+
+if __name__=='__main__':
+ try:main()
+ except Exception as e:
+  subprocess.run(['/usr/bin/notify-send','Bildschirm drehen','Drehung konnte nicht abgeschlossen werden.'],capture_output=True)
+  print(str(e),file=sys.stderr);sys.exit(1)

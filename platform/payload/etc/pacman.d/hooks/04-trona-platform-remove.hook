@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Remove
+Type = Package
+Target = trona-platform
+[Action]
+Description = Retain the required Trona platform package
+When = PreTransaction
+Exec = /usr/local/sbin/trona-update-check remove
+NeedsTargets
+AbortOnFail

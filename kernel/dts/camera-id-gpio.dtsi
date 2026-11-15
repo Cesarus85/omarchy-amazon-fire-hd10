@@ -1,0 +1,65 @@
+/* Temporary identification nodes; driver is loaded explicitly and powers off
+ * both sensors after reading IDs. Trona production wiring from live vendor DT. */
+/ { aliases { i2c2 = &camera_gpio2; i2c4 = &camera_gpio4; };
+ rear-camera-id {
+  compatible = "amazon,trona-camera-id"; rear-camera;
+  i2c-bus = <&camera_gpio2>;
+  pinctrl-names = "default"; pinctrl-0 = <&rear_camera_id_pins>;
+  clocks = <&topckgen CLK_TOP_MUX_CAMTG>;
+  assigned-clocks = <&topckgen CLK_TOP_MUX_CAMTG>;
+  assigned-clock-parents = <&topckgen CLK_TOP_UNIVP_192M_D8>;
+  reset-gpios = <&pio 101 GPIO_ACTIVE_LOW>;
+  avdd-supply = <&mt6358_vcama2_reg>;
+  dovdd-supply = <&mt6358_vcamio_reg>;
+  /* Stock Trona renames VRF12 to vcamd for the rear sensor. */
+  dvdd-supply = <&mt6358_vrf12_reg>;
+ };
+ front-camera-id {
+  compatible = "amazon,trona-camera-id"; i2c-bus = <&camera_gpio4>;
+  pinctrl-names = "default"; pinctrl-0 = <&front_camera_id_pins>;
+  clocks = <&topckgen CLK_TOP_MUX_CAMTG2>;
+  assigned-clocks = <&topckgen CLK_TOP_MUX_CAMTG2>;
+  assigned-clock-parents = <&topckgen CLK_TOP_UNIVP_192M_D8>;
+  reset-gpios = <&pio 102 GPIO_ACTIVE_LOW>;
+  powerdown-gpios = <&pio 98 GPIO_ACTIVE_LOW>;
+  avdd-supply = <&mt6358_vcama1_reg>;
+  dovdd-supply = <&mt6358_vcamio_reg>;
+ };
+};
+&pio {
+ trona_camera_i2c2_pins: camera-i2c2-pins {
+  pins-bus { pinmux = <PINMUX_GPIO103__FUNC_GPIO103>, <PINMUX_GPIO104__FUNC_GPIO104>; bias-pull-up; input-enable; };
+ };
+ trona_camera_i2c4_pins: camera-i2c4-pins {
+  pins-bus { pinmux = <PINMUX_GPIO105__FUNC_GPIO105>, <PINMUX_GPIO106__FUNC_GPIO106>; bias-pull-up; input-enable; };
+ };
+ rear_camera_id_pins: rear-camera-id-pins {
+  pins-clock { pinmux = <PINMUX_GPIO99__FUNC_CMMCLK0>; bias-disable; };
+  pins-reset { pinmux = <PINMUX_GPIO101__FUNC_GPIO101>; output-low; };
+ };
+ front_camera_id_pins: front-camera-id-pins {
+  pins-clock { pinmux = <PINMUX_GPIO100__FUNC_CMMCLK1>; bias-disable; };
+  pins-reset { pinmux = <PINMUX_GPIO102__FUNC_GPIO102>, <PINMUX_GPIO98__FUNC_GPIO98>; output-low; };
+ };
+};
+
+&i2c2 { status = "disabled"; };
+&i2c4 { status = "disabled"; };
+/ {
+ camera_gpio2: i2c-gpio-2 {
+  compatible = "i2c-gpio";
+  pinctrl-names = "default"; pinctrl-0 = <&trona_camera_i2c2_pins>;
+  sda-gpios = <&pio 104 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+  scl-gpios = <&pio 103 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+  i2c-gpio,delay-us = <5>;
+  #address-cells = <1>; #size-cells = <0>;
+ };
+ camera_gpio4: i2c-gpio-4 {
+  compatible = "i2c-gpio";
+  pinctrl-names = "default"; pinctrl-0 = <&trona_camera_i2c4_pins>;
+  sda-gpios = <&pio 106 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+  scl-gpios = <&pio 105 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+  i2c-gpio,delay-us = <5>;
+  #address-cells = <1>; #size-cells = <0>;
+ };
+};

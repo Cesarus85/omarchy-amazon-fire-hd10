@@ -1,0 +1,170 @@
+#!/usr/bin/python3
+"""Native Trona port integrity, package transaction guards and Omarchy integration."""
+import hashlib, json, os, subprocess, sys, tempfile, time
+from pathlib import Path
+BASE=Path('/usr/share/trona-platform')
+KERNEL='6.18.56-trona-arch12'
+BOOT='/dev/mmcblk0p16'; RECOVERY='/dev/mmcblk0p17'
+EXPECTED={BOOT:'@BOOT_SHA256@',RECOVERY:'@RECOVERY_SHA256@'}
+UUID='@ROOT_UUID@'
+HOME=Path('/home/trona')
+def run(*args,**kw):
+ return subprocess.check_output(args,text=True,**kw).strip()
+def fail(message): raise RuntimeError(message)
+def digest(path):
+ h=hashlib.sha256()
+ with open(path,'rb') as f:
+  for chunk in iter(lambda:f.read(1024*1024),b''): h.update(chunk)
+ return h.hexdigest()
+def atomic(path,text,mode=None,uid=None,gid=None):
+ path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
+ if path.exists() and path.read_text()==text:return
+ st=path.stat() if path.exists() else None
+ fd,name=tempfile.mkstemp(prefix='.'+path.name,dir=path.parent)
+ try:
+  with os.fdopen(fd,'w') as f:f.write(text);f.flush();os.fsync(f.fileno())
+  os.chmod(name,mode if mode is not None else (st.st_mode & 0o777 if st else 0o644))
+  os.chown(name,uid if uid is not None else (st.st_uid if st else 0),gid if gid is not None else (st.st_gid if st else 0))
+  os.replace(name,path)
+ finally:
+  if os.path.exists(name):os.unlink(name)
+def board():
+ if os.geteuid()!=0:fail('Als root ausführen: sudo trona-update-check check')
+ if b'amazon,trona\0' not in Path('/sys/firmware/devicetree/base/compatible').read_bytes():fail('Nicht Amazon Trona')
+def boot_check():
+ if os.uname().release!=KERNEL:fail('Ungeprüfter Kernel: '+os.uname().release)
+ if run('findmnt','-n','-o','UUID','/')!=UUID:fail('Unerwartetes Root-Dateisystem')
+ if run('blockdev','--getsize64','/dev/mmcblk0p18')!='@ROOT_BYTES@':fail('Root-Partition verändert')
+ for device,expected in EXPECTED.items():
+  if run('blockdev','--getro',device)!='1':fail('Boot/Recovery ist nicht schreibgeschützt: '+device)
+  if digest(device)!=expected:fail('Boot/Recovery-Prüfsumme verändert: '+device)
+def files_check():
+ manifest=json.loads((BASE/'files.json').read_text())
+ for name,entry in manifest.items():
+  p=Path('/'+name)
+  if 'link' in entry:
+   if not p.is_symlink() or os.readlink(p)!=entry['link']:fail('Veränderte Plattform-Verknüpfung: '+str(p))
+  elif not p.is_file() or p.is_symlink() or digest(p)!=entry['sha256']:fail('Fehlende/veränderte Plattform-Datei: '+str(p))
+  if not p.is_symlink() and p.stat().st_uid!=0:fail('Plattform-Datei gehört nicht root: '+str(p))
+ for mod in ['trona_audio','trona_poweroff','trona_battery','wlan_drv_gen3','trona_hci','stk8ba53','hi556','ov02b10_trona']:
+  if run('modinfo','-F','vermagic',mod).split()[0]!=KERNEL:fail('Falsche Modul-ABI: '+mod)
+def versions_check():
+ for name,version in json.loads((BASE/'qualified.json').read_text()).items():
+  if run('pacman','-Q',name)!=name+' '+version:fail('Ungeprüfte Plattform-Abhängigkeit: '+name)
+def patch_boot(text):
+ marker='# Trona native boot verification (managed by trona-platform).'
+ if marker in text:return text
+ anchor='operation=update-verify\n'
+ if text.count(anchor)!=1:fail('Omarchy-Bootprüfung wurde geändert; Port muss angepasst werden')
+ return text.replace(anchor,anchor+'\n'+marker+'\nif grep -zqx "amazon,trona" /sys/firmware/devicetree/base/compatible 2>/dev/null; then\n  sudo /usr/local/sbin/trona-update-check finalize\n  exit $?\nfi\n',1)
+def repair_user():
+ # A dedicated tablet include is managed; personal overrides and saved state aren't replaced.
+ p=HOME/'.config/hypr/trona-rotation.lua'
+ atomic(p,'-- Managed by trona-platform. Personal overrides belong in other user files.\ndofile("/usr/share/trona-platform/hypr/trona-rotation.lua")\n',uid=1000,gid=1000)
+ p=HOME/'.config/hypr/hyprland.lua';s=p.read_text()
+ if 'require("hypr.trona-rotation")' not in s:
+  atomic(p,s+'\nrequire("hypr.trona-rotation")\n')
+ p=HOME/'.config/omarchy/shell.json';data=json.loads(p.read_text())
+ bar=data.setdefault('bar',{});bar['locked']=True;bar['position']='top'
+ layout=bar.setdefault('layout',{});left=layout.setdefault('left',[])
+ all_ids={v.get('id') for values in layout.values() if isinstance(values,list) for v in values if isinstance(v,dict)}
+ for item in json.loads((BASE/'widgets.json').read_text()):
+  if item['id'] not in all_ids:left.append(item)
+ atomic(p,json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+
+def repair():
+ for command in [['trona-touch-panels'],['trona-lock-bar','--patch-only'],['trona-bluetooth-menu'],['trona-fix-app-grid'],['trona-patch-lock']]:
+  subprocess.run(['/usr/local/sbin/'+command[0],*command[1:]],check=True)
+ p=Path('/usr/bin/omarchy-update-boot');atomic(p,patch_boot(p.read_text()))
+ p=Path('/usr/bin/omarchy-update-aur-pkgs');s=p.read_text()
+ old='--ignore gcc14,gcc14-libs'
+ new=old+',trona-platform'
+ if new not in s:
+  if s.count(old)!=1:fail('Omarchy AUR helper changed; review local-platform exclusion')
+  atomic(p,s.replace(old,new,1))
+ # Drop privileges before touching any path controlled by the desktop user.
+ pid=os.fork()
+ if pid==0:
+  try:
+   os.setgroups([]);os.setgid(1000);os.setuid(1000);repair_user()
+   os._exit(0)
+  except Exception as e:
+   print('Tablet user configuration repair failed: '+str(e),file=sys.stderr,flush=True);os._exit(1)
+ _,status=os.waitpid(pid,0)
+ if status!=0:fail('Tablet user configuration repair failed')
+ # Don't let upstream logind handling race the tablet's Power-button daemon.
+ atomic('/etc/systemd/logind.conf.d/99-trona-power-button.conf','[Login]\nHandlePowerKey=ignore\nHandlePowerKeyLongPress=ignore\n')
+def integration_check():
+ if Path('/etc/sudoers.d/trona-bringup').exists():fail('Legacy passwordless administrator access returned')
+ if Path('/etc/systemd/system/serial-getty@ttyGS0.service.d/autologin.conf').exists():fail('Legacy serial autologin returned')
+ checks={
+ '/usr/share/omarchy/shell/Ui/KeyboardPanel.qml':'WlrLayershell.layer: WlrLayer.Top',
+ '/usr/share/omarchy/shell/plugins/bar/Bar.qml':'readonly property bool layoutLocked:',
+ '/usr/share/omarchy/shell/plugins/dock/AppGrid.qml':'// Swiping scrolls the app list;',
+ '/usr/bin/omarchy-bluetooth-device':'exec /usr/local/bin/trona-bluetooth-device',
+ '/usr/bin/omarchy-update-boot':'sudo /usr/local/sbin/trona-update-check finalize',
+ '/usr/share/omarchy/shell/plugins/lock/LockView.qml':'// Trona: keyboard inside the protected session-lock surface.',
+ '/usr/bin/omarchy-update-aur-pkgs':'--ignore gcc14,gcc14-libs,trona-platform',
+ '/home/trona/.config/hypr/hyprland.lua':'require("hypr.trona-rotation")',
+ '/home/trona/.config/hypr/trona-rotation.lua':'/usr/share/trona-platform/hypr/trona-rotation.lua'}
+ for path,marker in checks.items():
+  if marker not in Path(path).read_text():fail('Tablet-Integration fehlt: '+path)
+ data=json.loads((HOME/'.config/omarchy/shell.json').read_text())
+ if data['bar'].get('position')!='top' or data['bar'].get('locked') is not True:fail('Tablet-Leiste entsperrt/verschoben')
+def record(status,detail):
+ atomic('/var/lib/trona/update-status.json',json.dumps({'status':status,'detail':detail,'time':time.strftime('%Y-%m-%dT%H:%M:%S%z'),'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip()},indent=2)+'\n')
+def transaction_id():
+ pid=os.getppid()
+ for _ in range(12):
+  if pid<=1:break
+  try:
+   if Path(f'/proc/{pid}/comm').read_text().strip()=='pacman':return pid
+   pid=int(next(l.split()[1] for l in Path(f'/proc/{pid}/status').read_text().splitlines() if l.startswith('PPid:')))
+  except (OSError,StopIteration):break
+ fail('Kein pacman-Prozess gefunden')
+def guard_paths(targets,allowed):
+ for item in targets:
+  item=item.lstrip('/')
+  if item.startswith('boot/') or item=='boot':fail('Generische Boot-Datei passt nicht zur nativen Trona-Bootkette: '+item)
+  if item.startswith('usr/lib/modules/'):
+   if not allowed or (item != 'usr/lib/modules/' and not item.startswith('usr/lib/modules/'+KERNEL+'/')):fail('Kerneländerung braucht eine neue Trona-Portfreigabe: '+item)
+def main(mode):
+ board()
+ if mode=='protect':
+  for dev in EXPECTED:subprocess.run(['blockdev','--setro',dev],check=True)
+  boot_check();return
+ if mode=='paths':
+  state=json.loads(Path('/run/trona-package-transaction.json').read_text())
+  if state['pid']!=transaction_id():fail('Keine passende Transaktionsprüfung')
+  guard_paths(sys.stdin.read().splitlines(),state['platform']);return
+ if mode=='remove':
+  targets=set(sys.stdin.read().splitlines())
+  if 'trona-platform' in targets:fail('trona-platform ist für dieses Tablet erforderlich; Entfernung abgebrochen')
+  return
+ if mode=='pre':
+  targets=sys.stdin.read().splitlines()
+  boot_check();files_check();versions_check();integration_check()
+  bad=[x for x in targets if x in ['linux','linux-aarch64','linux-lts','linux-zen','linux-hardened','grub','limine','mkinitcpio','dracut'] or x.startswith(('u-boot','uboot','linux-mediatek'))]
+  if bad:fail('Generischer Kernel/Bootloader auf Trona nicht unterstützt: '+', '.join(bad))
+  atomic('/run/trona-package-transaction.json',json.dumps({'pid':transaction_id(),'platform':'trona-platform' in targets}))
+  print('Trona: Boot, Treiber und Tablet-Integration vor Transaktion geprüft.');return
+ if mode in ['post','finalize','boot']:
+  if mode=='boot':
+   for dev in EXPECTED:subprocess.run(['blockdev','--setro',dev],check=True)
+  boot_check();files_check();versions_check();repair();integration_check()
+  record('ok',mode+' verification passed')
+ elif mode=='check':
+  boot_check();files_check();versions_check();integration_check()
+ elif mode=='repair':
+  boot_check();files_check();versions_check();repair();integration_check();record('ok','repair passed')
+ else:fail('Modus: check | repair | protect | pre | paths | remove | post | finalize | boot')
+ print('Trona: Boot-Abbild, Recovery, Treiber und Tablet-Anpassungen geprüft.')
+if __name__=='__main__':
+ try:main(sys.argv[1] if len(sys.argv)>1 else 'check')
+ except Exception as e:
+  print('TRONA UPDATE GESTOPPT: '+str(e),file=sys.stderr)
+  print('Keine Schutzregeln umgehen. Plattform-Paket prüfen/anpassen; danach sudo trona-update-check check.',file=sys.stderr)
+  if os.geteuid()==0:
+   try:record('failed',str(e))
+   except Exception:pass
+  sys.exit(1)

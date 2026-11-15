@@ -1,0 +1,218 @@
+#!/usr/bin/python3
+"""Front and rear cameras for Trona: libcamera, touch controls and display-aware rotation."""
+import datetime
+import json
+import os
+import signal
+from pathlib import Path
+import subprocess
+import gi
+
+gi.require_version('Gtk', '3.0')
+gi.require_version('Gst', '1.0')
+gi.require_version('GstVideo', '1.0')
+from gi.repository import Gtk, Gst, GstVideo, GLib, GdkPixbuf, Gio
+
+Gst.init(None)
+CAMERAS = {
+    "front": ("/base/i2c-gpio-4/camera@3c", "Frontkamera", 1),
+    "rear": ("/base/i2c-gpio-2/camera@20", "Rückkamera", 3),
+}
+STATE = Path.home() / '.config/trona-camera/state.json'
+
+class Camera(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id='org.trona.Camera', flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+        GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, self.stop_signal)
+        GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, self.stop_signal)
+        self.window = None
+        self.pipeline = None
+        self.rotation = None
+        self.inhibit_fd = None
+        self.camera = "rear" if os.environ.get("TRONA_CAMERA") == "rear" else "front"
+        self.rotations_by_camera = {}
+        self.rotations = {}
+        self.transform = 0
+        try:
+            saved = json.loads(STATE.read_text())
+            stored = saved.get('rotation_by_camera', {'front': saved.get('rotation_by_display', {})})
+            self.rotations_by_camera = {camera: {str(int(k)): int(v) % 4 for k, v in values.items()}
+                                       for camera, values in stored.items() if camera in CAMERAS}
+            self.rotations = self.rotations_by_camera.setdefault(self.camera, {})
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
+
+    def stop_signal(self):
+        self.quit()
+        return False
+
+    def do_activate(self):
+        if self.window:
+            self.window.present()
+            return
+        self.window = Gtk.ApplicationWindow(application=self, title='Kamera')
+        self.window.set_default_size(800, 700)
+        header = Gtk.HeaderBar(title='Frontkamera', show_close_button=True)
+        self.header = header
+        self.window.set_titlebar(header)
+        self.switch = Gtk.Button(label='Zur Rückkamera')
+        self.switch.set_size_request(120, 44)
+        self.switch.connect('clicked', self.switch_camera)
+        header.pack_start(self.switch)
+        for text, callback in [('Bild drehen', self.rotate), ('Foto', self.photo)]:
+            button = Gtk.Button(label=text)
+            button.set_size_request(100, 44)
+            button.connect('clicked', callback)
+            header.pack_start(button)
+        self.status = Gtk.Label(label='Kamera startet …')
+        self.status.set_line_wrap(True)
+        self.status.set_margin_top(8)
+        self.status.set_margin_bottom(8)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.window.add(box)
+        self.box = box
+        box.pack_end(self.status, False, False, 0)
+        self.start_camera()
+        self.window.maximize()
+        self.window.show_all()
+        # React immediately to our shared display-orientation state. Keep the
+        # timer as a fallback for rotations made through other desktop controls.
+        self.orientation_watch = Gio.File.new_for_path(str(Path.home() / '.local/state/trona')).monitor_directory(Gio.FileMonitorFlags.NONE, None)
+        self.orientation_watch.connect('changed', self.orientation_changed)
+        GLib.timeout_add_seconds(2, self.update_rotation)
+
+    def stop_camera(self):
+        if self.pipeline:
+            bus = self.pipeline.get_bus()
+            bus.remove_signal_watch()
+            self.pipeline.set_state(Gst.State.NULL)
+            self.pipeline.get_state(3 * Gst.SECOND)
+            widget = self.sink.get_property('widget')
+            if widget.get_parent() == self.box:
+                self.box.remove(widget)
+            self.pipeline = None
+        if self.inhibit_fd is not None:
+            os.close(self.inhibit_fd)
+            self.inhibit_fd = None
+
+    def switch_camera(self, _button):
+        self.stop_camera()
+        self.camera = 'rear' if self.camera == 'front' else 'front'
+        self.rotations = self.rotations_by_camera.setdefault(self.camera, {})
+        self.start_camera()
+
+    def start_camera(self):
+        camera_path, title, _rotation = CAMERAS[self.camera]
+        self.header.set_title(title)
+        self.switch.set_label('Zur Rückkamera' if self.camera == 'front' else 'Zur Frontkamera')
+        self.rotation = None
+        self.status.set_text('Kamera startet …')
+        try:
+            self.pipeline = Gst.parse_launch(
+                f'libcamerasrc camera-name="{camera_path}" ! '
+                'video/x-raw,width=1280,height=960,format=RGB ! '
+                'queue max-size-buffers=2 leaky=downstream ! '
+                'videoflip name=rotation ! videoconvert ! video/x-raw,format=BGRx ! '
+                'gtksink name=preview sync=false')
+        except GLib.Error as error:
+            self.status.set_text("Kamera konnte nicht starten: " + error.message)
+            self.window.show_all()
+            return
+        self.sink = self.pipeline.get_by_name('preview')
+        self.flip = self.pipeline.get_by_name('rotation')
+        widget = self.sink.get_property('widget')
+        widget.set_hexpand(True)
+        widget.set_vexpand(True)
+        self.box.pack_start(widget, True, True, 0)
+        bus = self.pipeline.get_bus()
+        bus.add_signal_watch()
+        bus.connect('message::error', self.error)
+        self.update_rotation()
+        self.window.maximize()
+        self.window.show_all()
+        self.pipeline.set_state(Gst.State.PLAYING)
+        try:
+            connection = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+            reply, descriptors = connection.call_with_unix_fd_list_sync(
+                'org.freedesktop.login1', '/org/freedesktop/login1',
+                'org.freedesktop.login1.Manager', 'Inhibit',
+                GLib.Variant('(ssss)', ('idle', title, 'Kameravorschau', 'block')),
+                GLib.VariantType.new('(h)'), Gio.DBusCallFlags.NONE, 1000, None, None)
+            self.inhibit_fd = descriptors.get(reply.unpack()[0])
+        except GLib.Error:
+            pass
+        self.status.set_text('Fotos werden nur beim Tippen auf „Foto“ gespeichert.')
+
+    def orientation_changed(self, _watch, file, other, _event):
+        if file.get_basename() == 'orientation' or (other and other.get_basename() == 'orientation'):
+            self.update_rotation()
+
+    def update_rotation(self):
+        if not self.pipeline:
+            return True
+        transform = 0
+        try:
+            result = subprocess.run(['hyprctl', '-i', '0', 'monitors', '-j'],
+                                    capture_output=True, text=True, timeout=1, check=True)
+            monitors = json.loads(result.stdout)
+            transform = next(m['transform'] for m in monitors if m['name'] == 'DSI-1')
+        except (OSError, subprocess.SubprocessError, ValueError, StopIteration, KeyError):
+            return True
+        self.transform = transform
+        # The rear camera faces away from the user: its image needs the opposite
+        # display-rotation correction to the front camera.
+        direction = 1 if self.camera == 'rear' else -1
+        rotation = self.rotations.get(str(transform), (CAMERAS[self.camera][2] + direction * transform) % 4)
+        if rotation != self.rotation:
+            self.flip.set_property('method', rotation)
+            self.rotation = rotation
+        return True
+
+    def rotate(self, _button):
+        self.rotations[str(self.transform)] = ((self.rotation or 0) + 1) % 4
+        STATE.parent.mkdir(parents=True, exist_ok=True)
+        temporary = STATE.with_suffix('.tmp')
+        self.rotations_by_camera[self.camera] = self.rotations
+        temporary.write_text(json.dumps({'rotation_by_camera': self.rotations_by_camera}) + '\n')
+        temporary.replace(STATE)
+        self.update_rotation()
+
+    def photo(self, _button):
+        sample = self.sink.get_property('last-sample') if self.pipeline else None
+        if not sample:
+            self.status.set_text('Noch kein Bild verfügbar.')
+            return
+        try:
+            info = GstVideo.VideoInfo.new_from_caps(sample.get_caps())
+            buffer = sample.get_buffer()
+            raw = buffer.extract_dup(0, buffer.get_size())
+            rgba = bytearray(raw)
+            rgba[0::4] = raw[2::4]
+            rgba[2::4] = raw[0::4]
+            rgba[3::4] = bytes([255]) * len(rgba[3::4])
+            pixels = GdkPixbuf.Pixbuf.new_from_bytes(GLib.Bytes.new(bytes(rgba)),
+                GdkPixbuf.Colorspace.RGB, True, 8, info.width, info.height, info.stride[0])
+            pictures = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES)
+            folder = Path(pictures) if pictures else Path.home() / 'Pictures'
+            folder = folder / 'Kamera'
+            folder.mkdir(parents=True, exist_ok=True)
+            path = folder / ('Foto-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f') + '.jpg')
+            pixels.savev(str(path), 'jpeg', ['quality'], ['92'])
+            self.status.set_text('Gespeichert: ' + str(path.relative_to(Path.home())))
+        except (OSError, GLib.Error, ValueError) as error:
+            self.status.set_text('Foto konnte nicht gespeichert werden: ' + str(error))
+
+    def error(self, _bus, message):
+        error, _debug = message.parse_error()
+        self.status.set_text('Kamera nicht verfügbar: ' + error.message)
+        self.pipeline.set_state(Gst.State.NULL)
+        if self.inhibit_fd is not None:
+            os.close(self.inhibit_fd)
+            self.inhibit_fd = None
+
+    def do_shutdown(self):
+        self.stop_camera()
+        Gtk.Application.do_shutdown(self)
+
+if __name__ == '__main__':
+    Camera().run(None)

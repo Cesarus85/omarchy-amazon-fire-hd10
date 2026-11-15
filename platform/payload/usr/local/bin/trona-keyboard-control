@@ -1,0 +1,53 @@
+#!/usr/bin/python3
+"""User-facing keyboard visibility, persisted across rotation and login."""
+import fcntl,json,os,pathlib,subprocess,sys,time
+
+def command(*args):
+    p=subprocess.run(args,capture_output=True,text=True,timeout=12)
+    if p.returncode:raise RuntimeError(p.stderr.strip() or p.stdout.strip() or args[0])
+    return p.stdout
+
+def visible():
+    data=json.loads(command('/usr/bin/hyprctl','-i','0','-j','layers'))
+    return any(x['namespace']=='wlroots' for g in data.get('DSI-1',{}).get('levels',{}).values() for x in g)
+
+def main():
+    if os.getuid()==0:raise RuntimeError('Run as the desktop user')
+    action=sys.argv[1] if len(sys.argv)>1 else 'toggle'
+    if action not in ['toggle','show','hide','status']:raise RuntimeError('Use toggle, show, hide or status')
+    runtime=pathlib.Path(os.environ['XDG_RUNTIME_DIR'])
+    state=pathlib.Path.home()/'.local/state/trona/keyboard-visible'
+    with (runtime/'trona-rotation.lock').open('w') as rotation_lock, (runtime/'trona-keyboard-control.lock').open('w') as lock:
+        try:fcntl.flock(rotation_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:return
+        try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:return
+        old=visible()
+        if action=='status':
+            print(json.dumps({'visible':old,'saved_visible':state.read_text().strip()!='0' if state.exists() else True}));return
+        stamp=runtime/'trona-keyboard-control.last'
+        if action=='toggle' and stamp.exists() and time.monotonic()-float(stamp.read_text())<.5:return
+        target=not old if action=='toggle' else action=='show'
+        state.parent.mkdir(parents=True,exist_ok=True)
+        def save(value):
+            temp=state.with_suffix('.tmp');temp.write_text('1\n' if value else '0\n');temp.replace(state)
+        save(target)
+        try:
+            # Removing the virtual keyboard also releases any latched modifiers.
+            command('/usr/bin/systemctl','--user','restart' if target else 'stop','trona-keyboard.service')
+            deadline=time.monotonic()+12
+            while visible()!=target:
+                if time.monotonic()>deadline:raise RuntimeError('Keyboard visibility did not settle')
+                time.sleep(.1)
+        except Exception:
+            save(old)
+            command('/usr/bin/systemctl','--user','restart' if old else 'stop','trona-keyboard.service')
+            raise
+        stamp.write_text(str(time.monotonic()))
+        print(json.dumps({'visible':target,'verified':True}))
+
+if __name__=='__main__':
+    try:main()
+    except Exception as error:
+        subprocess.run(['/usr/bin/notify-send','Bildschirmtastatur','Umschaltung fehlgeschlagen.'],capture_output=True)
+        print(str(error),file=sys.stderr);sys.exit(1)

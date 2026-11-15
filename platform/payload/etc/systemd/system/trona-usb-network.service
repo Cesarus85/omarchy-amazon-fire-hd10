@@ -1,0 +1,10 @@
+[Unit]
+Description=Trona USB Ethernet link to Mac
+After=local-fs.target
+Before=sshd.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/trona-usb-network
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

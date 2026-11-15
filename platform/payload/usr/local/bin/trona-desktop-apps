@@ -1,0 +1,3 @@
+#!/bin/bash
+# Desktop starts without a terminal; keyboard preference remains respected.
+exec systemctl --user start trona-keyboard.service

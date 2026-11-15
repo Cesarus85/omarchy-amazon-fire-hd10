@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Bildschirmtastatur
+Comment=Bildschirmtastatur ein- oder ausblenden
+Exec=/usr/local/bin/trona-keyboard-control toggle
+Icon=input-keyboard
+Terminal=false
+Categories=Utility;Accessibility;

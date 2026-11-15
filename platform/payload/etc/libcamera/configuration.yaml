@@ -1,0 +1,17 @@
+%YAML 1.1
+---
+# Enable libcamera's software ISP for the mtk-seninf media device.
+# Install as ~/.config/libcamera/configuration.yaml (per user) or
+# /etc/libcamera/configuration.yaml (system wide). libcamera >= 0.5.
+version: 1
+configuration:
+  pipelines:
+    simple:
+      supported_devices:
+        - driver: mtk-seninf
+          software_isp: true
+  # CPU debayer: the 0.7.1 GPU debayer pads output lines to 256 bytes, which
+  # browsers reading PipeWire buffers as tightly packed show as a skewed image
+  # at widths that are not a multiple of 64 px. The CPU path keeps 30 fps here.
+  software_isp:
+    mode: cpu

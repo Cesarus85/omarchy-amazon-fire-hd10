@@ -1,0 +1,34 @@
+[
+  {
+    "id": "trona.rotation",
+    "type": "command",
+    "text": "↻ Drehen",
+    "tooltip": "Manuell drehen und automatische Drehung sperren",
+    "onClick": "/usr/local/bin/trona-rotate toggle",
+    "horizontalMargin": 10
+  },
+  {
+    "id": "trona.autorotate",
+    "type": "command",
+    "horizontalMargin": 7,
+    "onClick": "/usr/local/bin/trona-auto-rotate toggle",
+    "text": "Auto: an",
+    "tooltip": "Automatische Drehung aktiv – tippen zum Sperren"
+  },
+  {
+    "id": "trona.keyboard",
+    "type": "command",
+    "text": "⌨",
+    "tooltip": "Bildschirmtastatur ein-/ausblenden",
+    "onClick": "/usr/local/bin/trona-keyboard-control toggle",
+    "horizontalMargin": 6
+  },
+  {
+    "id": "trona.scale",
+    "type": "command",
+    "text": "A±",
+    "tooltip": "Anzeigegröße: 100 / 125 / 150 %",
+    "onClick": "/usr/local/bin/trona-scale toggle",
+    "horizontalMargin": 6
+  }
+]

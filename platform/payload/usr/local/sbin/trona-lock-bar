@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+"""Opt-in layout lock: keep ordinary taps usable on the tablet bar."""
+import json
+from pathlib import Path
+import shutil
+import sys
+
+bar = Path('/usr/share/omarchy/shell/plugins/bar/Bar.qml')
+source = bar.read_text()
+changes = [
+    ('  property bool barMoveActive: false',
+     '  // Tablet port: layout edits are opt-in; taps still open all widgets.\n'
+     '  readonly property bool layoutLocked: barConfig && barConfig.locked === true\n'
+     '  property bool barMoveActive: false'),
+    ('      if (dragging) return\n      dragging = true\n      root.beginBarMove',
+     '      if (dragging || root.layoutLocked) return\n      dragging = true\n      root.beginBarMove'),
+    ('readonly property bool canReorder: root.shell &&',
+     'readonly property bool canReorder: !root.layoutLocked && root.shell &&'),
+    ('        root.cycleBackground()\n        mouse.accepted = true',
+     '        if (!root.layoutLocked) root.cycleBackground()\n        mouse.accepted = true'),
+]
+if 'readonly property bool layoutLocked:' not in source:
+    for old, new in changes:
+        assert source.count(old) == 1, old
+        source = source.replace(old, new)
+    bar.write_text(source)
+if '--patch-only' in sys.argv:
+    print('Tablet bar layout lock applied; user configuration retained.')
+    raise SystemExit(0)
+
+config = Path('/home/trona/.config/omarchy/shell.json')
+data = json.loads(config.read_text())
+defaults = json.loads(Path('/usr/share/omarchy/config/omarchy/shell.json').read_text())
+data['bar']['position'] = 'top'
+data['bar']['locked'] = True
+data['bar']['layout'] = defaults['bar']['layout']
+config.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+print('Bar layout locked; normal widget actions retained. ')

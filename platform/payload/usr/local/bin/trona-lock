@@ -1,0 +1,19 @@
+#!/usr/bin/python3
+"""Request a real Omarchy session lock and wait for compositor acknowledgement."""
+import json,os,subprocess,time,sys
+if os.getuid()==0:raise SystemExit('Run in the desktop user session')
+env=os.environ.copy();env['OMARCHY_PATH']='/usr/share/omarchy'
+# During first login the separate authenticated greeter already owns the lock.
+deadline=time.monotonic()+10
+while time.monotonic()<deadline:
+ try:
+  p=subprocess.run(['omarchy-shell','lock','status'],env=env,capture_output=True,text=True,timeout=2)
+  if p.returncode==0 and json.loads(p.stdout).get('secure') is True:raise SystemExit(0)
+  if p.returncode!=0:
+   q=subprocess.run(['omarchy-hyprland-session-locked'],env=env,capture_output=True,timeout=2)
+   if q.returncode==0:raise SystemExit(0)
+  subprocess.run(['omarchy-shell','lock','lock'],env=env,capture_output=True,timeout=2)
+ except (subprocess.SubprocessError,ValueError):pass
+ time.sleep(.2)
+print('Bildschirmsperre wurde nicht bestätigt; Standby abgebrochen.',file=sys.stderr)
+raise SystemExit(1)

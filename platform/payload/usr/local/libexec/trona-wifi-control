@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+case "${1:-}" in
+ on)
+  printf 1 > /dev/wmtWifi
+  n=0
+  while [ ! -d /sys/class/net/wlan0 ]; do
+   n=$((n + 1)); [ "$n" -lt 10 ] || exit 1
+   sleep 1
+  done
+  # Keep errors/warnings while avoiding per-packet/scan logging during normal use.
+  test ! -w /proc/net/wlan/dbgLevel || printf '0xff:0x03\n' > /proc/net/wlan/dbgLevel
+  ;;
+ off) printf 0 > /dev/wmtWifi ;;
+ *) exit 2 ;;
+esac

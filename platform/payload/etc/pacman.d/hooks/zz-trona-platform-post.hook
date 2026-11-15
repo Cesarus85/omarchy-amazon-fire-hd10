@@ -1,0 +1,9 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = *
+[Action]
+Description = Restore tablet integration and verify native Trona boot
+When = PostTransaction
+Exec = /usr/local/sbin/trona-update-check post

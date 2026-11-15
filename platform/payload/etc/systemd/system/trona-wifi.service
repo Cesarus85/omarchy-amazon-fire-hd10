@@ -1,0 +1,17 @@
+[Unit]
+Description=Trona integrated Wi-Fi
+Requires=trona-wmt.service
+After=trona-wmt.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/modprobe trona_wlan_adaptor
+ExecStartPre=/usr/bin/modprobe wlan_drv_gen3
+ExecStart=/usr/local/libexec/trona-wifi-control on
+ExecStop=/usr/local/libexec/trona-wifi-control off
+RemainAfterExit=yes
+TimeoutStartSec=45
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

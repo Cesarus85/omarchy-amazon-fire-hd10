@@ -1,0 +1,40 @@
+{
+  "base": {
+    "repository": "https://github.com/vendor-mtk-sources/Amazon-Fire_HD10_11th_Gen",
+    "branch": "Fire_HD10-7.3.2.7-20230127",
+    "commit": "a7bf7858ae80a6986a3c63f0186610b1d6478c4f",
+    "paths": [
+      "src/vendor/mediatek/kernel_modules/connectivity/common",
+      "src/vendor/mediatek/kernel_modules/connectivity/wlan/core/gen3",
+      "src/vendor/mediatek/kernel_modules/connectivity/wlan/adaptor",
+      "src/kernel/mediatek/mt8183/4.4/drivers/misc/mediatek/btif",
+      "src/kernel/mediatek/mt8183/4.4/drivers/misc/mediatek/connectivity/common"
+    ]
+  },
+  "wlan_missing_export_files": {
+    "repository": "https://github.com/MotorolaMobilityLLC/vendor-mediatek-kernel_modules-connectivity-wlan-core-gen3",
+    "commit": "2c22688f6a5e27b766a21eb630e2b68bd80434f2",
+    "files": [
+      "Makefile",
+      "os/linux/include/gl_ate_agent.h",
+      "os/linux/include/gl_hook_api.h",
+      "os/linux/include/gl_qa_agent.h",
+      "mgmt/qosmap.c",
+      "include/mgmt/qosmap.h"
+    ]
+  },
+  "common_missing_export_files": {
+    "repository": "https://github.com/MotorolaMobilityLLC/vendor-mediatek-kernel_modules-connectivity-common",
+    "commit": "038e72f831e7af86b23d6e0ab9bdeb894f7caf21",
+    "files": [
+      "Makefile",
+      "debug_utility/ring.c",
+      "debug_utility/ring.h",
+      "debug_utility/ring_emi.c",
+      "debug_utility/ring_emi.h",
+      "debug_utility/connsys_debug_utility_emi.h"
+    ]
+  },
+  "vendor_headers": "Original Amazon MT8183 4.4 headers; hardware-reference files from emi/submodule, emi/mt8183, base/power/clkbuf_v1 and include/mt-plat. Per-file copyright/license retained.",
+  "native_adaptations": "Trona workspace changes; added compatibility headers and external build/audit scripts."
+}

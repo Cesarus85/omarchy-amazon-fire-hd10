@@ -1,0 +1,14 @@
+[Unit]
+Description=Trona radio firmware service
+Requires=trona-radio-platform.service
+After=trona-radio-platform.service
+Before=trona-wifi.service
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/usr/bin/python3 -u /usr/local/libexec/trona-wmt-launcher.py
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=15
+TimeoutStopSec=5

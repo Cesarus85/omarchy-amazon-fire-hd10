@@ -1,0 +1,10 @@
+[Unit]
+Description=Keep floating windows within the Trona display work area
+PartOf=graphical-session.target
+After=graphical-session-pre.target wayland-wm@Hyprland.service
+[Service]
+ExecStart=/usr/local/libexec/trona-fit-windows
+Restart=on-failure
+RestartSec=3
+[Install]
+WantedBy=graphical-session.target

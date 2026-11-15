@@ -1,0 +1,17 @@
+post_install() {
+  visudo -cf /etc/sudoers.d/00-trona-admin || return 1
+  rm -f /etc/sudoers.d/trona-bringup
+  rm -f /etc/systemd/system/serial-getty@ttyGS0.service.d/autologin.conf
+  depmod 6.18.56-trona-arch12
+  systemctl daemon-reload
+  systemctl enable trona-boot-guard.service
+  # Move only identical integration units into package ownership. User edits survive.
+  for unit in trona-auto-rotate trona-fit-windows trona-keyboard trona-sd-mount; do
+    if python3 -c 'import pathlib,sys; a,b=map(pathlib.Path,sys.argv[1:]); sys.exit(0 if a.is_file() and a.read_bytes()==b.read_bytes() else 1)' "/home/trona/.config/systemd/user/$unit.service" "/usr/lib/systemd/user/$unit.service"; then
+      rm "/home/trona/.config/systemd/user/$unit.service"
+      runuser -u trona -- env XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus systemctl --user reenable "$unit.service"
+    fi
+  done
+  runuser -u trona -- env XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus systemctl --user daemon-reload
+}
+post_upgrade() { post_install; }

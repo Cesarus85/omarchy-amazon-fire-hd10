@@ -1,0 +1,59 @@
+#!/bin/busybox sh
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+/bin/busybox --install -s /bin
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mkdir -p /dev/pts /dev/shm /run /tmp
+mount -t devpts devpts /dev/pts
+mount -t tmpfs -o mode=1777 tmpfs /dev/shm
+mount -t tmpfs -o mode=0755 tmpfs /run
+mount -t tmpfs tmpfs /tmp
+exec >/dev/console 2>&1
+echo 'TRONA_ARCH_INIT: booting persistent ARM root' >/dev/kmsg
+# Cable-only serial transport; normal login is provided by systemd after boot.
+mkdir -p /sys/kernel/config
+mount -t configfs configfs /sys/kernel/config
+g=/sys/kernel/config/usb_gadget/trona_probe
+mkdir -p "$g"
+echo 0x1d6b > "$g/idVendor"
+echo 0x0104 > "$g/idProduct"
+mkdir -p "$g/strings/0x409"
+echo TRONA-MAINLINE-PROBE > "$g/strings/0x409/serialnumber"
+echo Linux > "$g/strings/0x409/manufacturer"
+echo 'Trona Linux 6 Wayland probe' > "$g/strings/0x409/product"
+mkdir -p "$g/configs/c.1/strings/0x409"
+echo 'Serial console' > "$g/configs/c.1/strings/0x409/configuration"
+echo 250 > "$g/configs/c.1/MaxPower"
+mkdir -p "$g/functions/acm.GS0"
+ln -s "$g/functions/acm.GS0" "$g/configs/c.1/acm.GS0"
+sleep 3
+for udc in /sys/class/udc/*; do [ -e "$udc" ] || continue; echo "${udc##*/}" > "$g/UDC"; break; done
+# Retry a timed-out Mac enumeration once, without disturbing a configured link.
+(sleep 15; if [ -e "$udc/state" ] && [ "$(cat "$udc/state")" != configured ]; then echo '' > "$g/UDC"; sleep 2; echo "${udc##*/}" > "$g/UDC"; fi) &
+
+fail() {
+ echo "TRONA_ARCH_INIT: $*" >/dev/kmsg
+ echo "Boot failed: $*. Hold Volume Up while powering on for recovery."
+ while :; do sleep 3600; done
+}
+for i in $(seq 1 20); do [ -b /dev/mmcblk0p18 ] && break; sleep 1; done
+# Keep every firmware/boot partition read-only. Only the selected root is writable.
+for b in /dev/mmcblk0p* /dev/mmcblk0boot*; do [ -b "$b" ] && blockdev --setro "$b"; done
+mkdir -p /hostdata /newroot
+blkid /dev/mmcblk0p18 | grep -q 'UUID="@ROOT_UUID@"' || fail 'Unexpected root UUID'
+[ "$(blockdev --getsize64 /dev/mmcblk0p18)" = @ROOT_BYTES@ ] || fail 'Unexpected root size'
+blockdev --setrw /dev/mmcblk0p18
+/fsck/lib/ld-linux-aarch64.so.1 --library-path /fsck/lib /fsck/bin/e2fsck -p /dev/mmcblk0p18
+rc=$?
+[ "$rc" -le 1 ] || fail "Filesystem check failed: $rc"
+mount -t ext4 -o rw,noatime /dev/mmcblk0p18 /newroot || fail 'Root mount failed'
+[ -x /newroot/usr/lib/systemd/systemd ] || fail 'systemd missing'
+mkdir -p /newroot/root/hostdata /run/initramfs/bin /run/initramfs/dev /run/initramfs/proc /run/initramfs/sys /run/initramfs/oldroot
+cp /bin/busybox /run/initramfs/bin/busybox
+cp /shutdown /run/initramfs/shutdown
+chmod 755 /run/initramfs/shutdown
+
+for m in dev proc sys run; do mount --move /$m /newroot/$m || fail "Cannot move $m"; done
+echo 'TRONA_ARCH_INIT: executing systemd from persistent eMMC root' >/newroot/dev/kmsg
+exec switch_root /newroot /usr/lib/systemd/systemd

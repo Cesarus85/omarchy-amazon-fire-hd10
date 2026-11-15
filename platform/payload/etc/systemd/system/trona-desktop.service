@@ -1,0 +1,18 @@
+[Unit]
+Description=Trona native Omarchy desktop
+After=seatd.service systemd-user-sessions.service
+Requires=seatd.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+[Service]
+User=trona
+Group=trona
+SupplementaryGroups=seat video input render
+PAMName=login
+WorkingDirectory=/home/trona
+Environment=HOME=/home/trona XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=Hyprland
+ExecStart=/usr/local/bin/trona-omarchy-session
+Restart=on-failure
+RestartSec=5
+[Install]
+WantedBy=multi-user.target

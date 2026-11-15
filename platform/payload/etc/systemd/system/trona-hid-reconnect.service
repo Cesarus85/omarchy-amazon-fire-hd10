@@ -1,0 +1,8 @@
+[Unit]
+Description=Reconnect previously trusted Bluetooth keyboards after standby
+After=bluetooth.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/trona-hid-reconnect
+TimeoutStartSec=80

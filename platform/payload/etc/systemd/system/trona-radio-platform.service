@@ -1,0 +1,12 @@
+[Unit]
+Description=Trona native radio platform
+After=systemd-udev-trigger.service
+Before=trona-wmt.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/modprobe trona_btif
+ExecStartPre=/usr/bin/modprobe wmt_drv
+ExecStart=/usr/bin/python3 /usr/local/libexec/trona-wmt-launcher.py --init
+RemainAfterExit=yes
+TimeoutStartSec=30

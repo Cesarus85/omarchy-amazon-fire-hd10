@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+"""Only invoked by the greeter after PAM authentication. No password arguments."""
+import json,os,pathlib,subprocess,sys
+if os.getuid()!=1000:raise SystemExit('Desktop user only')
+def command(*args):return subprocess.check_output(args,text=True,timeout=15)
+instances=json.loads(command('hyprctl','-j','instances'))
+sig=os.environ.get('HYPRLAND_INSTANCE_SIGNATURE')
+instance=next(i for i in instances if i['instance']==sig)
+p=pathlib.Path(os.environ['XDG_RUNTIME_DIR'])/('trona-session-'+str(instance['pid']))
+p.write_text('activating\n')
+command('hyprctl','-i',sig,'reload')
+errors=command('hyprctl','-i',sig,'configerrors').strip()
+if errors or p.read_text().strip()!='ready':
+ print('Desktop configuration did not initialize',file=sys.stderr);raise SystemExit(1)

@@ -1,0 +1,58 @@
+&{/rear-camera-id} { status = "disabled"; };
+&mt6358_vcama2_reg { regulator-min-microvolt = <2800000>; regulator-max-microvolt = <2800000>; };
+&mt6358_vrf12_reg { regulator-min-microvolt = <1200000>; regulator-max-microvolt = <1200000>; };
+&camera_gpio2 {
+ hi556: camera@20 {
+  compatible = "hynix,hi556"; reg = <0x20>;
+  pinctrl-names = "default"; pinctrl-0 = <&rear_camera_id_pins>;
+  clocks = <&topckgen CLK_TOP_MUX_CAMTG>; clock-names = "clk";
+  assigned-clocks = <&topckgen CLK_TOP_MUX_CAMTG>;
+  assigned-clock-parents = <&topckgen CLK_TOP_UNIVP_192M_D8>;
+  reset-gpios = <&pio 101 GPIO_ACTIVE_LOW>;
+  avdd-supply = <&mt6358_vcama2_reg>;
+  dvdd-supply = <&mt6358_vrf12_reg>;
+  dovdd-supply = <&mt6358_vcamio_reg>;
+  orientation = <1>; rotation = <0>;
+  port { hi556_ep: endpoint {
+   remote-endpoint = <&seninf_rear_ep>;
+   clock-lanes = <0>; data-lanes = <1 2>;
+   link-frequencies = /bits/ 64 <440000000>;
+  }; };
+ };
+};
+&{/soc} {
+ camera_csi0: phy@11c80000 {
+  compatible = "amazon,trona-csi0a";
+  reg = <0 0x11c80000 0 0x2000>;
+  num-lanes = <2>; #phy-cells = <1>;
+ };
+ trona_seninf: seninf@1a040000 {
+  compatible = "mediatek,mt8183-seninf";
+  mediatek,csi0-split;
+  reg = <0 0x1a040000 0 0x8000>;
+  interrupts = <GIC_SPI 251 IRQ_TYPE_LEVEL_LOW>;
+  clocks = <&camsys CLK_CAM_SENINF>, <&topckgen CLK_TOP_MUX_SENINF>;
+  clock-names = "camsys", "top_mux";
+  power-domains = <&spm MT8183_POWER_DOMAIN_CAM>;
+  phys = <&camera_csi0 PHY_TYPE_DPHY>; phy-names = "csi0";
+  ports {
+   #address-cells = <1>; #size-cells = <0>;
+   port@0 { reg = <0>; seninf_rear_ep: endpoint {
+    remote-endpoint = <&hi556_ep>; clock-lanes = <1>; data-lanes = <0 2>;
+   }; };
+   port@4 { reg = <4>; seninf_out_ep: endpoint { remote-endpoint = <&camsv_rear_ep>; }; };
+  };
+ };
+ trona_camsv: camsv@1a050510 {
+  compatible = "mediatek,mt8183-camsv";
+  reg = <0 0x1a050510 0 0x40>, <0 0x1a050020 0 0x28>, <0 0x1a050220 0 0x90>;
+  interrupts = <GIC_SPI 258 IRQ_TYPE_LEVEL_LOW>;
+  clocks = <&camsys CLK_CAM_CAM>, <&camsys CLK_CAM_CAMTG>, <&camsys CLK_CAM_CAMSV0>;
+  clock-names = "cam", "camtg", "camsv";
+  iommus = <&iommu M4U_PORT_CAM_SOCO>, <&iommu M4U_PORT_CAM_SOC1>, <&iommu M4U_PORT_CAM_SOC2>, <&iommu M4U_PORT_CAM_IMGO>;
+  power-domains = <&spm MT8183_POWER_DOMAIN_CAM>;
+  ports { #address-cells = <1>; #size-cells = <0>;
+   port@0 { reg = <0>; camsv_rear_ep: endpoint { remote-endpoint = <&seninf_out_ep>; }; };
+  };
+ };
+};

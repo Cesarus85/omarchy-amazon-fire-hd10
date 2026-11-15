@@ -1,0 +1,11 @@
+[Unit]
+Description=Mount SD-Karte for the Trona desktop
+After=graphical-session-pre.target
+PartOf=graphical-session.target
+ConditionPathExists=/dev/disk/by-uuid/@SD_UUID@
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/trona-sd-mount
+TimeoutStartSec=20
+[Install]
+WantedBy=graphical-session.target

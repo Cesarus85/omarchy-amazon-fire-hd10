@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+"""Trona screen blanking and validated s2idle. No input contents are recorded."""
+import fcntl,glob,grp,json,os,pathlib,select,signal,socket,struct,subprocess,sys,time
+
+R=pathlib.Path('/run/trona-standby')
+BL=pathlib.Path('/sys/class/backlight/mt6370-backlight/brightness')
+UDC=pathlib.Path('/sys/kernel/config/usb_gadget/trona_probe/UDC')
+SOCK=R/'control.sock'
+EVENT=struct.Struct('llHHi')
+BT_UNITS=['bluetooth.service','trona-bluetooth.service']
+
+def run(*args,check=True,timeout=35):
+ p=subprocess.run(args,capture_output=True,text=True,timeout=timeout)
+ if check and p.returncode:raise RuntimeError('Command failed: '+args[0]+' '+args[1])
+ return p
+def active(unit):return run('systemctl','is-active','--quiet',unit,check=False).returncode==0
+def online():return int(pathlib.Path('/sys/class/power_supply/trona-usb-power/online').read_text())!=0
+def dpms(on):
+ run('runuser','-u','trona','--','env','XDG_RUNTIME_DIR=/run/user/1000','hyprctl','-i','0','dispatch',
+     'hl.dsp.dpms({ action = "'+('enable' if on else 'disable')+'" })')
+def report(event,**fields):print(json.dumps(dict(event=event,time=time.time(),**fields)),flush=True)
+def save(data):
+ R.mkdir(mode=0o750,exist_ok=True)
+ p=R/'state.tmp';p.write_text(json.dumps(data));p.replace(R/'state.json')
+def recover():
+ p=R/'state.json'
+ if not p.exists():return
+ s=json.loads(p.read_text())
+ # Best-effort every restoration independently, including after a service failure.
+ actions=[]
+ for cpu in sorted(s.get('offline_cpus',[])):
+  actions.append(lambda cpu=cpu:pathlib.Path(f'/sys/devices/system/cpu/cpu{cpu}/online').write_text('1'))
+ if s.get('udc') and not UDC.read_text().strip():actions.append(lambda:UDC.write_text(s['udc']))
+ if 'pm_async' in s:actions.append(lambda:pathlib.Path('/sys/power/pm_async').write_text(s['pm_async']))
+ if s.get('masked'):actions.append(lambda:run('systemctl','unmask','--runtime',*s['masked']))
+ if s.get('wifi'):actions.append(lambda:run('systemctl','start','trona-wifi.service'))
+ if s.get('bt_module'):actions.append(lambda:run('modprobe','trona_hci'))
+ if s.get('bt_units'):actions.append(lambda:run('systemctl','start',*s['bt_units']))
+ if s.get('bt_units'):actions.append(lambda:run('bluetoothctl','power','on' if s.get('bt_power') else 'off',check=False))
+ if s.get('bt_units') and s.get('bt_power'):actions.append(lambda:run('systemctl','start','--no-block','trona-hid-reconnect.service'))
+ actions.extend([lambda:dpms(True),lambda:BL.write_text(str(s.get('brightness',617)))])
+ errors=[]
+ for a in actions:
+  try:a()
+  except Exception as e:errors.append(str(e));report('restore_error',error=str(e))
+ if errors:raise RuntimeError('Standby restoration incomplete')
+ s.update(state='awake',udc='',masked=[],wifi=False,bt_module=False,bt_units=[],offline_cpus=[])
+ save(s)
+
+class Standby:
+ def __init__(self):
+  self.blank=False;self.last=time.monotonic();self.brightness=max(1,int(BL.read_text()))
+  self.inputs={};self.scan_at=0;self.ignore_power_until=0;self.press=0
+  self.idle=int(os.environ.get('TRONA_IDLE_SECONDS','300'))
+ def wake(self):
+  dpms(True);BL.write_text(str(self.brightness));self.blank=False;self.last=time.monotonic()
+  save(dict(state='awake',brightness=self.brightness));report('screen_on')
+ def sleep(self):
+  if not self.blank:
+   try:
+    run('runuser','-u','trona','--','env','XDG_RUNTIME_DIR=/run/user/1000',
+        'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus',
+        'OMARCHY_PATH=/usr/share/omarchy','/usr/local/bin/trona-lock',timeout=18)
+   except Exception as e:
+    report('lock_failed',error=str(e));self.last=time.monotonic();return
+  if not self.blank:self.brightness=max(1,int(BL.read_text()))
+  s=dict(state='screen_off',brightness=self.brightness);save(s)
+  dpms(False);BL.write_text('0');self.blank=True
+  if online():report('screen_off',reason='external_power_keeps_charging');return
+  try:
+   assert pathlib.Path('/sys/module/mtk_wdt/parameters/trona_suspend_test_watchdog').read_text().strip()=='N'
+   assert '[none]' in pathlib.Path('/sys/power/pm_test').read_text()
+   s.update(state='preparing',wifi=active('trona-wifi.service'),
+       bt_units=[u for u in BT_UNITS if active(u)],bt_module=pathlib.Path('/sys/module/trona_hci').exists(),
+       bt_power='Powered: yes' in run('bluetoothctl','show',check=False).stdout,
+       masked=[u for u in BT_UNITS if not pathlib.Path('/run/systemd/system',u).is_symlink()])
+   save(s)
+   run('systemctl','stop','trona-hid-reconnect.service',check=False)
+   run('bluetoothctl','power','off',check=False)
+   if s['masked']:run('systemctl','mask','--runtime',*s['masked'])
+   run('systemctl','stop',*BT_UNITS)
+   if s['bt_module']:run('modprobe','-r','trona_hci')
+   if s['wifi']:run('systemctl','stop','trona-wifi.service')
+   for _ in range(100):
+    if pathlib.Path('/sys/kernel/debug/pm_genpd/conn/current_state').read_text().startswith('off'):break
+    time.sleep(.1)
+   else:raise RuntimeError('Radio domain did not power off')
+   if online():raise RuntimeError('External power connected during preparation')
+   s['udc']=UDC.read_text().strip();save(s)
+   if s['udc']:UDC.write_text('\n')
+   run('sync');s['state']='sleeping';s['pm_async']=pathlib.Path('/sys/power/pm_async').read_text().strip();save(s)
+   pathlib.Path('/sys/power/pm_async').write_text('0')
+   # A second Power press during preparation cancels rather than getting lost.
+   for fd,(_,name) in list(self.inputs.items()):
+    if name!='mtk-pmic-keys':continue
+    try:data=os.read(fd,EVENT.size*64)
+    except BlockingIOError:continue
+    if any(EVENT.unpack_from(data,i)[2:]==(1,116,1) for i in range(0,len(data)-EVENT.size+1,EVENT.size)):
+     raise RuntimeError('Power pressed during sleep preparation')
+   fd=os.open('/sys/power/wakeup_count',os.O_RDONLY|os.O_NONBLOCK)
+   try:count=os.read(fd,64).decode().strip()
+   finally:os.close(fd)
+   if os.uname().release=='6.18.56-trona-arch12':
+    # Record the restoration intent before the first CPU is offlined.
+    # CPU0 remains available for PMIC/RTC wake; only restore prior online CPUs.
+    s['offline_cpus']=[cpu for cpu in range(1,8) if pathlib.Path(f'/sys/devices/system/cpu/cpu{cpu}/online').read_text().strip()=='1']
+    save(s)
+    for cpu in reversed(s['offline_cpus']):pathlib.Path(f'/sys/devices/system/cpu/cpu{cpu}/online').write_text('0')
+    if pathlib.Path('/sys/devices/system/cpu/online').read_text().strip()!='0':raise RuntimeError('Secondary CPU power-down incomplete')
+   pathlib.Path('/sys/power/wakeup_count').write_text(count)
+   report('sleep_enter',mode='s2idle',offline_cpus=s.get('offline_cpus',[]));start=time.time()
+   pathlib.Path('/sys/power/state').write_text('freeze')
+   report('sleep_return',seconds=time.time()-start)
+  except Exception as e:report('sleep_aborted',error=str(e))
+  finally:
+   recover();self.blank=False;self.last=time.monotonic();self.ignore_power_until=self.last+1
+   # Discard the press/release that woke the kernel, without logging input data.
+   for fd in list(self.inputs):
+    try:
+     while os.read(fd,EVENT.size*64):pass
+    except (BlockingIOError,OSError):pass
+ def command(self,c):
+  if c=='wake':self.wake()
+  elif c=='sleep' and not self.blank:self.sleep()
+  elif c=='toggle':self.wake() if self.blank else self.sleep()
+ def scan_inputs(self):
+  paths=set(glob.glob('/dev/input/event*'))
+  for fd,(p,name) in list(self.inputs.items()):
+   if p not in paths:os.close(fd);del self.inputs[fd]
+  known={p for p,n in self.inputs.values()}
+  for p in paths-known:
+   try:
+    name=pathlib.Path('/sys/class/input',pathlib.Path(p).name,'device/name').read_text().strip()
+    fd=os.open(p,os.O_RDONLY|os.O_NONBLOCK)
+    if name=='mtk-pmic-keys':fcntl.ioctl(fd,0x40044590,1) # EVIOCGRAB: Power belongs to this service.
+    self.inputs[fd]=(p,name)
+   except OSError:pass
+  self.scan_at=time.monotonic()
+ def idle_inhibited(self):
+  # Honor standard application inhibitors for automatic blanking only.
+  # A deliberate Power press still invokes sleep immediately.
+  try:
+   result=run('busctl','--json=short','call','org.freedesktop.login1',
+       '/org/freedesktop/login1','org.freedesktop.login1.Manager','ListInhibitors',timeout=2)
+   return any('idle' in row[0].split(':') and row[3]=='block'
+              for row in json.loads(result.stdout)['data'][0])
+  except (OSError,RuntimeError,ValueError,KeyError,IndexError,subprocess.SubprocessError):return False
+ def audio_playing(self):
+  for p in glob.glob('/proc/asound/card*/pcm*p/sub*/status'):
+   try:
+    if 'state: RUNNING' in pathlib.Path(p).read_text():return True
+   except OSError:pass
+  return False
+ def loop(self):
+  R.mkdir(mode=0o750,exist_ok=True);os.chown(R,0,grp.getgrnam('trona').gr_gid)
+  SOCK.unlink(missing_ok=True)
+  with socket.socket(socket.AF_UNIX) as server:
+   server.bind(str(SOCK));os.chmod(SOCK,0o660);os.chown(SOCK,0,grp.getgrnam('trona').gr_gid);server.listen(4)
+   self.wake();report('ready',idle_seconds=self.idle)
+   run('systemctl','start','--no-block','trona-hid-reconnect.service',check=False)
+   while True:
+    now=time.monotonic()
+    if now-self.scan_at>3:self.scan_inputs()
+    ready,_,_=select.select([server,*self.inputs],[],[],1)
+    for item in ready:
+     if item is server:
+      conn,_=server.accept()
+      with conn:
+       conn.settimeout(1)
+       try:cmd=conn.recv(32).decode().strip()
+       except (OSError,UnicodeError):continue
+       if cmd in ['wake','sleep','toggle']:
+        conn.sendall(b'accepted\n');self.command(cmd)
+      continue
+     try:data=os.read(item,EVENT.size*64)
+     except OSError:
+      os.close(item);self.inputs.pop(item,None);continue
+     if not data:os.close(item);self.inputs.pop(item,None);continue
+     power=self.inputs[item][1]=='mtk-pmic-keys'
+     for off in range(0,len(data)-EVENT.size+1,EVENT.size):
+      _,_,typ,code,value=EVENT.unpack_from(data,off)
+      if typ not in [1,2,3]:continue
+      now=time.monotonic();self.last=now
+      if power:
+       if typ==1 and code==116 and now>=self.ignore_power_until:
+        if value==1:self.press=now
+        elif value==0 and self.press and now-self.press<2:
+         self.press=0;self.command('toggle');self.ignore_power_until=time.monotonic()+1
+      elif self.blank:self.wake()
+    if self.blank and not online():self.sleep()
+    if not self.blank and time.monotonic()-self.last>=self.idle:
+     if self.audio_playing() or self.idle_inhibited():self.last=time.monotonic()
+     else:self.sleep()
+
+if __name__=='__main__':
+ mode=sys.argv[1] if len(sys.argv)>1 else 'daemon'
+ if mode=='recover':recover()
+ elif mode in ['sleep','wake','toggle']:
+  with socket.socket(socket.AF_UNIX) as client:
+   client.connect(str(SOCK));client.sendall(mode.encode());print(client.recv(64).decode().strip())
+ elif mode=='daemon':
+  signal.signal(signal.SIGTERM,lambda *_:sys.exit(0))
+  # The system service can start before the auto-login compositor is ready.
+  for _ in range(60):
+   try:dpms(True);break
+   except RuntimeError:time.sleep(1)
+  else:raise SystemExit('Desktop did not become ready')
+  try:recover();Standby().loop()
+  finally:recover()
+ else:raise SystemExit('Unknown command')

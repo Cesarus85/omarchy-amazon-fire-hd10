@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = *
+[Action]
+Description = Verify native Trona boot and drivers before changing packages
+When = PreTransaction
+Exec = /usr/local/sbin/trona-update-check pre
+NeedsTargets
+AbortOnFail

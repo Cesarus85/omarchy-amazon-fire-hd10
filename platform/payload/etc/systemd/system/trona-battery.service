@@ -1,0 +1,15 @@
+[Unit]
+Description=Trona battery measurement and charge estimate
+After=systemd-modules-load.service local-fs.target
+Before=upower.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/modprobe trona_battery
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=20
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+name: Source checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 tests/check-source.py
+      - run: python3 tests/test-profile.py
+      - run: python3 tests/test-rotation-policy.py
+      - run: python3 drivers/connectivity/tests/rx-eapol-optional-status.py

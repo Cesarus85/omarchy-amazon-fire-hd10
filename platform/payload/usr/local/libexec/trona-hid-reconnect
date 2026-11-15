@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+"""Reconnect only already bonded/trusted HID devices; never pair or change trust."""
+import dbus,time
+bus=dbus.SystemBus()
+manager=dbus.Interface(bus.get_object('org.bluez','/'),'org.freedesktop.DBus.ObjectManager')
+objects=manager.GetManagedObjects()
+adapters=[p for p,i in objects.items() if 'org.bluez.Adapter1' in i and i['org.bluez.Adapter1'].get('Powered')]
+if not adapters:raise SystemExit(0)
+targets=[]
+for p,i in objects.items():
+ d=i.get('org.bluez.Device1',{})
+ if d.get('Paired') and d.get('Trusted') and not d.get('Blocked') and any(str(u).startswith(('00001812-','00001124-')) for u in d.get('UUIDs',[])):
+  targets.append(p)
+if not targets:raise SystemExit(0)
+started=[]
+try:
+ for p in adapters:
+  adapter=dbus.Interface(bus.get_object('org.bluez',p),'org.bluez.Adapter1')
+  try:
+   adapter.SetDiscoveryFilter({'Transport':dbus.String('le'),'DuplicateData':dbus.Boolean(False)})
+   adapter.StartDiscovery();started.append(adapter)
+  except dbus.DBusException:pass
+ deadline=time.monotonic()+60
+ while targets and time.monotonic()<deadline:
+  for p in targets[:]:
+   obj=bus.get_object('org.bluez',p);props=dbus.Interface(obj,'org.freedesktop.DBus.Properties')
+   try:
+    if props.Get('org.bluez.Device1','Connected'):
+     targets.remove(p);print('Previously paired HID connected',flush=True);continue
+    dbus.Interface(obj,'org.bluez.Device1').Connect(timeout=8)
+   except dbus.DBusException as e:
+    if e.get_dbus_name().endswith(('NotReady','UnknownObject')):raise
+   time.sleep(1)
+  if targets:time.sleep(2)
+ print('HID reconnect wait complete; pending='+str(len(targets)),flush=True)
+finally:
+ for adapter in started:
+  try:adapter.StopDiscovery()
+  except dbus.DBusException:pass

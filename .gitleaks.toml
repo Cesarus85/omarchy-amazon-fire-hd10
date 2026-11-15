@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Two upstream WLAN enum aliases, not credentials"
+regexTarget = "secret"
+regexes = [
+  '''^ENUM_ENCRYPTION1_KEY_ABSENT$''',
+  '''^Ndis802_11Encryption1KeyAbsent$''',
+]

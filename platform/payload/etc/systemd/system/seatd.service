@@ -1,0 +1,9 @@
+[Unit]
+Description=Trona seat management
+After=systemd-udev-trigger.service
+[Service]
+ExecStart=/usr/bin/seatd -g seat
+Environment=SEATD_VTBOUND=0
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target

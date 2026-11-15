@@ -1,0 +1,13 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Path
+Target = boot/*
+Target = usr/lib/modules/*
+[Action]
+Description = Protect the native Trona kernel and boot chain
+When = PreTransaction
+Exec = /usr/local/sbin/trona-update-check paths
+NeedsTargets
+AbortOnFail

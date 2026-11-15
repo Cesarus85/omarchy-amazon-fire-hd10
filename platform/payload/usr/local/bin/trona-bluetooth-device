@@ -1,0 +1,51 @@
+#!/usr/bin/python3
+"""Board-local BlueZ device actions; authentication stays with the desktop agent."""
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+def main():
+    if len(sys.argv) != 3 or sys.argv[1] not in ('pair', 'connect', 'disconnect', 'forget') or not re.fullmatch(r'(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}', sys.argv[2]):
+        raise SystemExit('Usage: trona-bluetooth-device <pair|connect|disconnect|forget> <address>')
+    if b'amazon,trona\0' not in Path('/sys/firmware/devicetree/base/compatible').read_bytes():
+        raise SystemExit('This integration is restricted to Amazon Trona')
+    import dbus
+    action, address = sys.argv[1], sys.argv[2].upper()
+    bus = dbus.SystemBus()
+    objects = dbus.Interface(bus.get_object('org.bluez', '/'), 'org.freedesktop.DBus.ObjectManager').GetManagedObjects()
+    matches = [(p, i['org.bluez.Device1']) for p, i in objects.items() if i.get('org.bluez.Device1', {}).get('Address') == address]
+    if len(matches) != 1:
+        raise RuntimeError('Gerät nicht eindeutig gefunden. Bluetooth-Menü erneut öffnen und suchen lassen.')
+    path, initial = matches[0]
+    obj = bus.get_object('org.bluez', path)
+    device = dbus.Interface(obj, 'org.bluez.Device1')
+    props = dbus.Interface(obj, 'org.freedesktop.DBus.Properties')
+    if action in ('pair', 'connect'):
+        subprocess.run(['/usr/share/omarchy/bin/omarchy-bluetooth-power', 'on'], check=True, timeout=15, stdout=subprocess.DEVNULL)
+        if action == 'pair' and not bool(props.Get('org.bluez.Device1', 'Paired')):
+            device.Pair(timeout=125)
+            if not bool(props.Get('org.bluez.Device1', 'Paired')):
+                raise RuntimeError('Kopplung nicht bestätigt.')
+        if not bool(props.Get('org.bluez.Device1', 'Connected')):
+            device.Connect(timeout=35)
+        # Only trust after successful explicit pairing or a connection to an
+        # already paired device. Failed pair requests never grant trust.
+        if bool(props.Get('org.bluez.Device1', 'Paired')):
+            props.Set('org.bluez.Device1', 'Trusted', dbus.Boolean(True))
+    elif action == 'disconnect':
+        if bool(props.Get('org.bluez.Device1', 'Connected')):
+            device.Disconnect(timeout=15)
+    else:
+        dbus.Interface(bus.get_object('org.bluez', initial['Adapter']), 'org.bluez.Adapter1').RemoveDevice(dbus.ObjectPath(path), timeout=20)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as exc:
+        message = str(exc)
+        print(message, file=sys.stderr)
+        subprocess.run(['/usr/bin/notify-send', '-u', 'normal', 'Bluetooth-Verbindung', message], check=False)
+        raise SystemExit(1)

@@ -1,0 +1,59 @@
+#!/usr/bin/python3
+"""Board-scoped, checked patch: keyboard is a child of the real session-lock surface."""
+from pathlib import Path
+import shutil
+base=Path('/usr/share/omarchy/shell/plugins/lock')
+p=base/'LockView.qml';s=p.read_text()
+if '// Trona: keyboard inside the protected session-lock surface.' not in s:
+ old='      anchors.centerIn: parent\n      color: Commons.Color.lock.background'
+ if s.count(old)!=1:raise SystemExit('LockView layout changed; review Trona touch lock')
+ s=s.replace(old,'      anchors.horizontalCenter: parent.horizontalCenter\n      y: Math.max(36, (parent.height - tronaKeyboard.height - height) / 2)\n      color: Commons.Color.lock.background')
+ anchor='    // The crossed-out icon has no meaning to a user who has never seen it'
+ if s.count(anchor)!=1:raise SystemExit('LockView keyboard anchor changed')
+ s=s.replace(anchor,'''    // Trona: keyboard inside the protected session-lock surface.
+    TouchKeyboard {
+      id: tronaKeyboard
+      anchors.bottom: parent.bottom
+      anchors.bottomMargin: 16
+      anchors.horizontalCenter: parent.horizontalCenter
+      width: Math.min(parent.width - 24, 1080)
+      height: Math.min(350, Math.max(260, parent.height * 0.37))
+      inputEnabled: root.inputEnabled && !root.authenticatingPassword
+      onActivity: root.wakeRequested()
+      onInsertText: function(value) { root.passwordTextEdited(root.passwordText + value); root.clearFailureRequested(); root.forcePasswordFocus() }
+      onBackspace: { root.passwordTextEdited(root.passwordText.slice(0, -1)); root.forcePasswordFocus() }
+      onClear: { root.passwordTextEdited(""); root.clearFailureRequested(); root.forcePasswordFocus() }
+      onSubmit: {
+        var value = root.passwordText
+        root.passwordTextEdited("")
+        if (value.length > 0) root.submitPassword(value)
+      }
+    }
+
+'''+anchor)
+ p.write_text(s)
+p=base/'Service.qml';s=p.read_text()
+old='  function armBlankTimer(delayMs) {\n    idleBlankTimer.interval = delayMs || idleBlankTimer.idleMs\n    idleBlankTimer.armedAt = Date.now()\n    idleBlankTimer.restart()\n  }'
+new='  function armBlankTimer(delayMs) {\n    // Trona: the native standby controller owns DPMS and backlight.\n    idleBlankTimer.stop()\n  }'
+if new not in s:
+ if s.count(old)!=1:raise SystemExit('Lock timer changed; review native standby integration')
+ p.write_text(s.replace(old,new))
+p=Path('/usr/share/omarchy/shell/plugins/lock/Service.qml');s=p.read_text()
+if 'property var tronaGeometry:' not in s:
+ s=s.replace('  property var shell: null','  property var tronaGeometry: ({})\n  property var shell: null',1)
+ a='        id: lockView\n        anchors.fill: parent'
+ b='''        id: lockView
+        anchors.fill: parent
+        function tronaReportGeometry() {
+          root.tronaGeometry = {viewWidth: width, viewHeight: height,
+            surfaceWidth: lockSurface.width, surfaceHeight: lockSurface.height}
+        }
+        onWidthChanged: Qt.callLater(tronaReportGeometry)
+        onHeightChanged: Qt.callLater(tronaReportGeometry)
+        Component.onCompleted: Qt.callLater(tronaReportGeometry)'''
+ assert s.count(a)==1;s=s.replace(a,b)
+ s=s.replace('        secure: sessionLock.secure,','        secure: sessionLock.secure,\n        tronaGeometry: root.tronaGeometry,',1)
+ p.write_text(s)
+
+shutil.copyfile('/usr/share/trona-platform/lock/TouchKeyboard.qml',base/'TouchKeyboard.qml')
+print('Trona touch keyboard integrated into session lock.')

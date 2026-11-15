@@ -1,0 +1,7 @@
+#!/bin/bash
+# Mount this user's SD volume on desktop login. Missing cards are optional.
+set -euo pipefail
+device=/dev/disk/by-uuid/@SD_UUID@
+[[ -b $device ]] || exit 0
+findmnt -rn -S "$device" >/dev/null && exit 0
+exec /usr/bin/udisksctl mount --no-user-interaction -b "$device"

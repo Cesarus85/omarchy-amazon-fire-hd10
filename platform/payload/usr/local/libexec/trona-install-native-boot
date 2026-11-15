@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Guarded boot-only update from the persistent native system; never reboot."""
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+image, manifest_path = map(Path, sys.argv[1:3])
+manifest = json.loads(manifest_path.read_text())
+assert b'amazon,trona\0' in Path('/sys/firmware/devicetree/base/compatible').read_bytes()
+assert subprocess.check_output(['findmnt','-no','SOURCE','/'],text=True).strip() == '/dev/mmcblk0p18'
+assert subprocess.check_output(['blockdev','--getsize64','/dev/mmcblk0p18']).strip() == b'@ROOT_BYTES@'
+assert subprocess.check_output(['blkid','-s','UUID','-o','value','/dev/mmcblk0p18']).strip() == b'@ROOT_UUID@'
+assert 'PARTNAME=linux-root\n' in Path('/sys/class/block/mmcblk0p18/uevent').read_text()
+assert subprocess.check_output(['blockdev', '--getsize64', '/dev/mmcblk0p16']).strip() == b'33554432'
+assert Path('/sys/class/block/mmcblk0p16/uevent').read_text().find('PARTNAME=boot\n') >= 0
+node = Path('/dev/mmcblk0p16')
+recovery = Path('/dev/mmcblk0p17')
+digest = lambda b: hashlib.sha256(b).hexdigest()
+recovery_hash = '@RECOVERY_SHA256@'
+assert digest(recovery.read_bytes()) == recovery_hash
+old = node.read_bytes()
+assert digest(old) == manifest['baseline_boot_sha256'], 'Unexpected current boot image'
+data = image.read_bytes()
+assert data[:8] == b'ANDROID!' and len(data) < len(old)
+assert digest(data) == manifest['image_sha256']
+data += bytes(len(old) - len(data))
+assert digest(data) == manifest['padded_boot_sha256']
+subprocess.run(['sync'], check=True)
+subprocess.run(['blockdev', '--setrw', str(node)], check=True)
+try:
+    try:
+        with node.open('r+b', buffering=0) as out:
+            assert out.write(data) == len(data)
+        subprocess.run(['sync'], check=True)
+        assert digest(node.read_bytes()) == digest(data), 'Boot readback failed'
+    except BaseException:
+        with node.open('r+b', buffering=0) as out:
+            assert out.write(old) == len(old)
+        subprocess.run(['sync'], check=True)
+        assert digest(node.read_bytes()) == digest(old), 'RESTORE FAILED: DO NOT REBOOT'
+        raise
+finally:
+    subprocess.run(['blockdev', '--setro', str(node)], check=True)
+assert digest(recovery.read_bytes()) == recovery_hash
+print(json.dumps({'boot_written_and_verified': digest(data),
+                  'rollback_copy': 'RAM only; no persistent backup created', 'recovery_unchanged': True,
+                  'boot_readonly_restored': True, 'reboot_requested': False}))

@@ -1,0 +1,530 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/* Trona persistent Linux bring-up. Wiring from the device's live DTB
+ * and amazon-mt8183-devs trona-maverick-unify 7ec747b4.
+ * Common MT8183 GPU/PMIC/USB setup informed by TECHO5 athena 75538f1f.
+ */
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/phy/phy.h>
+#include "mt8183.dtsi"
+#include "mt6358.dtsi"
+/ {
+ model = "MT8183";
+ version = "dvt"; /* Required by installed LK DTB selector, verified in its code. */
+ compatible = "amazon,trona", "mediatek,mt8183";
+ aliases { serial0 = &uart0; i2c0 = &i2c0; };
+ chosen {
+  #address-cells = <2>; #size-cells = <2>; ranges;
+  bootargs = "";
+  stdout-path = "serial0:921600n8";
+  /* Replaced at arch_initcall from LK's actual little-endian videolfb tag. */
+  framebuffer0: framebuffer@624e0000 {
+   compatible = "simple-framebuffer";
+   reg = <0 0x624e0000 0 (1216 * 1920 * 4)>;
+   width = <1200>; height = <1920>; stride = <4864>;
+   format = "a8r8g8b8"; status = "okay";
+  };
+ };
+ /* LK panel enumeration: these legacy nodes are read before Linux starts.
+  * Mainline display output is still through simpledrm, not these nodes. */
+ odm {
+  /* Exact stock LED/backlight setup consumed by LK before Linux boots. */
+		led@0 {
+			compatible = "mediatek,red";
+			led_mode = <0x00>;
+			data = <0x01>;
+			pwm_config = <0x00 0x00 0x00 0x00 0x00>;
+		};
+
+		led@1 {
+			compatible = "mediatek,green";
+			led_mode = <0x00>;
+			data = <0x01>;
+			pwm_config = <0x00 0x00 0x00 0x00 0x00>;
+		};
+
+		led@2 {
+			compatible = "mediatek,blue";
+			led_mode = <0x00>;
+			data = <0x01>;
+			pwm_config = <0x00 0x00 0x00 0x00 0x00>;
+		};
+
+		led@3 {
+			compatible = "mediatek,jogball-backlight";
+			led_mode = <0x00>;
+			data = <0x01>;
+			pwm_config = <0x00 0x00 0x00 0x00 0x00>;
+		};
+
+		led@4 {
+			compatible = "mediatek,keyboard-backlight";
+			led_mode = <0x00>;
+			data = <0x01>;
+			pwm_config = <0x00 0x00 0x00 0x00 0x00>;
+		};
+
+		led@5 {
+			compatible = "mediatek,button-backlight";
+			led_mode = <0x00>;
+			data = <0x01>;
+			pwm_config = <0x00 0x00 0x00 0x00 0x00>;
+		};
+
+		led@6 {
+			compatible = "mediatek,lcd-backlight";
+			led_mode = <0x03>;
+			data = <0x01>;
+			pwm_config = <0x00 0x01 0x00 0x00 0x00>;
+			brightness-normalize-enable = <0x01>;
+			chosen-id;
+			brightness-normalize-count = <0x0a>;
+			brightness-normalize-table = <0x00 0x1c2 0x1c2 0x4d 0x01 0x1d8 0x1d8 0x4d 0x02 0x1b2 0x1b2 0x4d 0x03 0x1ad 0x1ad 0x4d 0x04 0x1bd 0x1bd 0x4d 0x05 0x1a0 0x1a0 0x4d 0x06 0x1cc 0x1cc 0x4d 0x07 0x1c2 0x1c2 0x4d 0x10 0x1b3 0x1b3 0x4d 0x17 0x1b3 0x1b3 0x4d>;
+		};
+
+  lcm_common_resource: lcm_common_resource {
+   lcm_rst_gpio = <&pio 45 0>; tp_rst_gpio = <&pio 2 0>;
+  };
+  lcm0: lcm@0 {
+   compatible = "focal,ft8201";
+   lcm_common_resource = <&lcm_common_resource>;
+   lcm_common_vcc1v8-supply = <&mt6358_vrf18_reg>; status = "okay";
+  };
+  lcm1: lcm@1 {
+   compatible = "novatek,nt36523";
+   lcm_common_resource = <&lcm_common_resource>;
+   lcm_common_vcc1v8-supply = <&mt6358_vrf18_reg>; status = "okay";
+  };
+  lcm2: lcm@2 {
+   compatible = "focal,ft8201ab";
+   lcm_common_resource = <&lcm_common_resource>;
+   lcm_common_vcc1v8-supply = <&mt6358_vrf18_reg>; status = "okay";
+  };
+  lcm_panels { lcm_vendor_id = <3>; lcm-phandle-list = <&lcm0 &lcm1 &lcm2>; };
+ };
+ /* LK uses this exact legacy path to initialize the external backlight IC. */
+ mt6370_pmu_dts {
+		bled {
+			compatible = "mediatek,mt6370_pmu_bled";
+			interrupt-names = "bled_ocp";
+			mt,bled_name = "mt6370_pmu_bled";
+			mt,chan_en = <0x0f>;
+			mt,map_linear;
+			mt,bl_ovp_level = <0x03>;
+			mt,bl_ocp_level = <0x02>;
+			mt,use_pwm;
+			mt,pwm_fsample = <0x02>;
+			mt,pwm_deglitch = <0x01>;
+			mt,pwm_avg_cycle = <0x00>;
+			mt,bled_ramptime = <0x03>;
+			mt,bled_flash_ramp = <0x01>;
+			mt,max_bled_brightness = <0x55a>;
+			mt,ignore_initial_bled_brightness = <0x01>;
+		};
+
+ };
+ memory { device_type = "memory"; reg = <0 0x40000000 0 0xc0000000>; };
+ reserved-memory {
+  #address-cells = <2>; #size-cells = <2>; ranges;
+  /* Remaining secure/firmware reservations are populated by LK itself. */
+  ramoops@54410000 {
+   compatible = "ramoops"; reg = <0 0x54410000 0 0xe0000>;
+   record-size = <0x1000>; ftrace-size = <0x1000>; console-size = <0x40000>; pmsg-size = <0x10000>;
+   ecc-size = <0>;
+  };
+ };
+ reg_vsys: regulator-vsys {
+  compatible = "regulator-fixed"; regulator-name = "vsys";
+  regulator-always-on; regulator-boot-on;
+ };
+};
+&gic { mediatek,broken-save-restore-fw; };
+&pmic { interrupts-extended = <&pio 182 IRQ_TYPE_LEVEL_HIGH>; };
+/* Persistent boot: recovery remains available via bootloader key combination. */
+&mt6358regulator {
+ vsys-ldo1-supply = <&reg_vsys>; vsys-ldo2-supply = <&reg_vsys>; vsys-ldo3-supply = <&reg_vsys>;
+ vsys-vcore-supply = <&reg_vsys>; vsys-vdram1-supply = <&reg_vsys>;
+ vsys-vgpu-supply = <&reg_vsys>; vsys-vmodem-supply = <&reg_vsys>;
+ vsys-vpa-supply = <&reg_vsys>; vsys-vproc11-supply = <&reg_vsys>; vsys-vproc12-supply = <&reg_vsys>;
+ vsys-vs1-supply = <&reg_vsys>; vsys-vs2-supply = <&reg_vsys>;
+ vs1-ldo1-supply = <&mt6358_vs1_reg>; vs2-ldo1-supply = <&mt6358_vdram1_reg>;
+ vs2-ldo2-supply = <&mt6358_vs2_reg>; vs2-ldo3-supply = <&mt6358_vs2_reg>; vs2-ldo4-supply = <&mt6358_vs2_reg>;
+};
+&mt6358_vdram2_reg { regulator-always-on; };
+&mt6358_vrf18_reg { regulator-always-on; };
+&mt6358_vldo28_reg { regulator-always-on; };
+&mt6358_vgpu_reg {
+ regulator-min-microvolt = <625000>; regulator-max-microvolt = <900000>;
+ regulator-coupled-with = <&mt6358_vsram_gpu_reg>; regulator-coupled-max-spread = <100000>;
+};
+&mt6358_vsram_gpu_reg {
+ regulator-min-microvolt = <850000>; regulator-max-microvolt = <1000000>;
+ regulator-coupled-with = <&mt6358_vgpu_reg>; regulator-coupled-max-spread = <100000>;
+};
+&mfg_async { domain-supply = <&mt6358_vsram_gpu_reg>; };
+&mfg { domain-supply = <&mt6358_vgpu_reg>; };
+&gpu { mali-supply = <&mt6358_vgpu_reg>; status = "okay"; };
+&uart0 { status = "okay"; };
+&scp { /delete-property/ memory-region; status = "disabled"; };
+/* Stage one keeps the bootloader display running through simpledrm. */
+&dsi0 { status = "disabled"; };
+&dpi0 { status = "disabled"; };
+&ssusb {
+ dr_mode = "peripheral"; maximum-speed = "high-speed";
+ mediatek,u3p-dis-msk = <1>; mediatek,force-vbus;
+ vusb33-supply = <&mt6358_vusb_reg>; status = "okay";
+};
+&usb_host { status = "disabled"; };
+&u2port0 { mediatek,force-vbus; };
+&u3phy { status = "okay"; };
+&i2c0 {
+ pinctrl-names = "default"; pinctrl-0 = <&i2c0_pins>;
+ clock-frequency = <400000>; status = "okay";
+ touchscreen@38 {
+  compatible = "focaltech,ft8201"; reg = <0x38>;
+  interrupts-extended = <&pio 1 IRQ_TYPE_EDGE_FALLING>;
+  reset-gpios = <&pio 2 GPIO_ACTIVE_LOW>;
+  vcc-supply = <&mt6358_vldo28_reg>; iovcc-supply = <&mt6358_vrf18_reg>;
+  touchscreen-size-x = <1200>; touchscreen-size-y = <1920>;
+ };
+};
+&pio {
+ i2c0_pins: i2c0-pins {
+  pins-bus { pinmux = <PINMUX_GPIO82__FUNC_SDA0>, <PINMUX_GPIO83__FUNC_SCL0>; mediatek,pull-up-adv = <3>; input-enable; };
+ };
+};
+
+/* UNTESTED candidate: eMMC enumeration only, no filesystem mount.
+ * Kernel MMC pinmux from mt8183-kukui; VEMC wiring verified in stock Trona DT.
+ * Kept at 26 MHz without HS200/HS400 until successful readback.
+ */
+&pio {
+mmc0_pins_default: mmc0-default-pins {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO123__FUNC_MSDC0_DAT0>,
+				 <PINMUX_GPIO128__FUNC_MSDC0_DAT1>,
+				 <PINMUX_GPIO125__FUNC_MSDC0_DAT2>,
+				 <PINMUX_GPIO132__FUNC_MSDC0_DAT3>,
+				 <PINMUX_GPIO126__FUNC_MSDC0_DAT4>,
+				 <PINMUX_GPIO129__FUNC_MSDC0_DAT5>,
+				 <PINMUX_GPIO127__FUNC_MSDC0_DAT6>,
+				 <PINMUX_GPIO130__FUNC_MSDC0_DAT7>,
+				 <PINMUX_GPIO122__FUNC_MSDC0_CMD>;
+			input-enable;
+			drive-strength = <MTK_DRIVE_14mA>;
+			mediatek,pull-up-adv = <01>;
+		};
+
+		pins-clk {
+			pinmux = <PINMUX_GPIO124__FUNC_MSDC0_CLK>;
+			drive-strength = <MTK_DRIVE_14mA>;
+			mediatek,pull-down-adv = <2>;
+		};
+
+		pins-rst {
+			pinmux = <PINMUX_GPIO133__FUNC_MSDC0_RSTB>;
+			drive-strength = <MTK_DRIVE_14mA>;
+			mediatek,pull-down-adv = <01>;
+		};
+	};
+};
+
+&mmc0 {
+ status = "okay";
+ pinctrl-names = "default", "state_uhs";
+ pinctrl-0 = <&mmc0_pins_default>;
+ pinctrl-1 = <&mmc0_pins_default>;
+ bus-width = <8>;
+ max-frequency = <26000000>;
+ non-removable;
+ no-sd;
+ no-sdio;
+ vmmc-supply = <&mt6358_vemc_reg>;
+ vqmmc-supply = <&mt6358_vio18_reg>;
+};
+
+/* MT6370 wiring verified in stock DT: I2C5 address 0x34, IRQ GPIO10. */
+&i2c5 {
+ status = "okay";
+ clock-frequency = <400000>;
+ pinctrl-names = "default";
+ pinctrl-0 = <&trona_i2c5_pins>;
+ subpmic: pmic@34 {
+  compatible = "mediatek,mt6370";
+  reg = <0x34>;
+  pinctrl-names = "default";
+  pinctrl-0 = <&trona_pmic_irq_pin>;
+  interrupts-extended = <&pio 10 IRQ_TYPE_LEVEL_LOW>;
+  interrupt-controller;
+  #interrupt-cells = <1>;
+  mt6370_adc: adc {
+   compatible = "mediatek,mt6370-adc";
+   #io-channel-cells = <1>;
+  };
+  backlight {
+   compatible = "mediatek,mt6370-backlight";
+   mediatek,bled-channel-use = /bits/ 8 <15>;
+   mediatek,bled-ovp-microvolt = <29000000>;
+   mediatek,bled-ocp-microamp = <1500000>;
+   max-brightness = <1371>;
+   default-brightness = <256>;
+  };
+  charger {
+   compatible = "mediatek,mt6370-charger";
+   interrupts = <68>, <48>, <6>;
+   interrupt-names = "uvp_d_evt", "attach_i", "mivr";
+   io-channels = <&mt6370_adc 5>;
+   io-channel-names = "ibus";
+   status = "disabled"; /* Enable after reading bootloader charging limits. */
+  };
+  typec {
+   compatible = "mediatek,mt6370-tcpc";
+   pinctrl-names = "default";
+   pinctrl-0 = <&trona_tcpc_irq_pin>;
+   interrupts-extended = <&pio 41 IRQ_TYPE_LEVEL_LOW>;
+   connector {
+    compatible = "usb-c-connector";
+    label = "USB-C";
+    power-role = "sink";
+    data-role = "device";
+    typec-power-opmode = "default";
+    self-powered; /* The tablet can stay alive on its battery during port reset. */
+    pd-disable; /* Fixed 5 V only; use CC-advertised Type-C current. */
+   };
+  };
+  regulators {};
+ };
+};
+&pio {
+ trona_i2c5_pins: trona-i2c5-pins {
+  pins-bus {
+   pinmux = <PINMUX_GPIO48__FUNC_SCL5>, <PINMUX_GPIO49__FUNC_SDA5>;
+   bias-pull-up;
+   input-enable;
+  };
+ };
+};
+
+/ {
+ sound {
+  compatible = "amazon,trona-audio";
+  mediatek,platform = <&afe>;
+  speaker-enable-gpios = <&pio 151 GPIO_ACTIVE_HIGH>;
+  speaker-gain-gpios = <&pio 150 GPIO_ACTIVE_HIGH>;
+ };
+};
+&mt6358codec {
+ Avdd-supply = <&mt6358_vaud28_reg>;
+ mediatek,dmic-mode = <0>;
+};
+&afe { pinctrl-names = "default"; pinctrl-0 = <&trona_audio_pins>; };
+&pio {
+ trona_audio_pins: trona-audio-pins {
+  pins-mosi {
+   pinmux = <PINMUX_GPIO136__FUNC_AUD_CLK_MOSI>,
+            <PINMUX_GPIO137__FUNC_AUD_SYNC_MOSI>,
+            <PINMUX_GPIO138__FUNC_AUD_DAT_MOSI0>,
+            <PINMUX_GPIO139__FUNC_AUD_DAT_MOSI1>,
+            <PINMUX_GPIO140__FUNC_AUD_CLK_MISO>,
+            <PINMUX_GPIO141__FUNC_AUD_SYNC_MISO>,
+            <PINMUX_GPIO142__FUNC_AUD_DAT_MISO0>,
+            <PINMUX_GPIO143__FUNC_AUD_DAT_MISO1>;
+   drive-strength = <MTK_DRIVE_4mA>;
+   bias-disable;
+  };
+ };
+};
+
+&pio {
+ trona_pmic_irq_pin: trona-pmic-irq-pin {
+  pins-irq {
+   pinmux = <PINMUX_GPIO10__FUNC_GPIO10>;
+   input-enable;
+   input-schmitt-enable;
+   bias-pull-up;
+  };
+ };
+};
+
+/* Native connectivity resources. Drivers are loaded manually during bring-up. */
+/ {
+ reserved-memory {
+  trona_consys_mem: consys-reserve-memory {
+   compatible = "mediatek,consys-reserve-memory";
+   no-map;
+   size = <0 0x200000>;
+   alignment = <0 0x200000>;
+   alloc-ranges = <0 0x40000000 0 0x80000000>;
+  };
+ };
+ trona_btif: btif@1100c000 {
+  compatible = "mediatek,btif";
+  reg = <0 0x1100c000 0 0x1000>, <0 0x11000a80 0 0x80>, <0 0x11000b00 0 0x80>;
+  interrupt-parent = <&sysirq>;
+  interrupts = <GIC_SPI 114 IRQ_TYPE_LEVEL_LOW>, <GIC_SPI 139 IRQ_TYPE_LEVEL_LOW>, <GIC_SPI 140 IRQ_TYPE_LEVEL_LOW>;
+  clocks = <&infracfg CLK_INFRA_BTIF>, <&infracfg CLK_INFRA_AP_DMA>;
+  clock-names = "btifc", "apdmac";
+ };
+ trona_consys: consys@18070000 {
+  compatible = "mediatek,mt8183-consys";
+  reg = <0 0x18070000 0 0x1000>, <0 0x10007000 0 0x100>, <0 0x10001000 0 0x1000>, <0 0x10006000 0 0x1000>;
+  interrupt-parent = <&sysirq>;
+  interrupts = <GIC_SPI 289 IRQ_TYPE_LEVEL_LOW>, <GIC_SPI 291 IRQ_TYPE_LEVEL_LOW>;
+  power-domains = <&spm MT8183_POWER_DOMAIN_CONN>;
+  memory-region = <&trona_consys_mem>;
+  vcn18-supply = <&mt6358_vcn18_reg>;
+  vcn28-supply = <&mt6358_vcn28_reg>;
+  vcn33_bt-supply = <&mt6358_vcn33_reg>;
+  vcn33_wifi-supply = <&mt6358_vcn33_reg>;
+  pinctrl-names = "default", "wifi_ant_state_oh", "wifi_ant_state_ol", "conn-active", "conn-idle";
+  pinctrl-0 = <&trona_conn_default>;
+  pinctrl-1 = <&trona_conn_ant_oh>;
+  pinctrl-2 = <&trona_conn_ant_ol>;
+  pinctrl-3 = <&trona_conn_active>;
+  pinctrl-4 = <&trona_conn_idle>;
+  tcxo_en = <&pio 7 GPIO_ACTIVE_HIGH>;
+  tcxo-gpios = <&pio 7 GPIO_ACTIVE_HIGH>;
+  resets = <&watchdog MT8183_TOPRGU_CONN_MCU_SW_RST>;
+  reset-names = "mcu";
+ };
+ trona_wifi: wifi@180f0000 {
+  compatible = "mediatek,wifi";
+  reg = <0 0x180f0000 0 0x1100>, <0 0x10212180 0 0x6c>, <0 0x10001000 0 0x1000>, <0 0x180e0000 0 0x70>;
+  interrupt-parent = <&sysirq>;
+  interrupts = <GIC_SPI 290 IRQ_TYPE_LEVEL_LOW>, <GIC_SPI 118 IRQ_TYPE_LEVEL_LOW>;
+  clocks = <&infracfg CLK_INFRA_CQ_DMA>;
+  clock-names = "wifi-dma";
+  hardware-values = <0x788 0xa5800 0xa5800>;
+ };
+};
+&pio {
+ trona_conn_default: conn-default {
+  pins { pinmux = <PINMUX_GPIO156__FUNC_GPIO156>; bias-disable; output-high; };
+ };
+ /* Preserve the shipped pin-level polarity, including the vendor state names. */
+ trona_conn_ant_oh: conn-ant-oh {
+  pins { pinmux = <PINMUX_GPIO156__FUNC_GPIO156>; output-low; };
+ };
+ trona_conn_ant_ol: conn-ant-ol {
+  pins { pinmux = <PINMUX_GPIO156__FUNC_GPIO156>; output-high; };
+ };
+};
+
+&pio {
+ trona_conn_active: conn-active {
+  pins { pinmux = <PINMUX_GPIO113__FUNC_CONN_TOP_CLK>, <PINMUX_GPIO114__FUNC_CONN_TOP_DATA>, <PINMUX_GPIO115__FUNC_CONN_BT_CLK>, <PINMUX_GPIO116__FUNC_CONN_BT_DATA>, <PINMUX_GPIO117__FUNC_CONN_WF_HB0>, <PINMUX_GPIO118__FUNC_CONN_WF_HB1>, <PINMUX_GPIO119__FUNC_CONN_WF_HB2>, <PINMUX_GPIO120__FUNC_CONN_WB_PTA>, <PINMUX_GPIO121__FUNC_CONN_HRST_B>; };
+ };
+ trona_conn_idle: conn-idle {
+  pins { pinmux = <PINMUX_GPIO113__FUNC_GPIO113>, <PINMUX_GPIO114__FUNC_GPIO114>, <PINMUX_GPIO115__FUNC_GPIO115>, <PINMUX_GPIO116__FUNC_GPIO116>, <PINMUX_GPIO117__FUNC_GPIO117>, <PINMUX_GPIO118__FUNC_GPIO118>, <PINMUX_GPIO119__FUNC_GPIO119>, <PINMUX_GPIO120__FUNC_GPIO120>, <PINMUX_GPIO121__FUNC_GPIO121>; };
+ };
+};
+
+/* Stage 1 CPU DVFS: keep the proven 800 mV boot voltage and cap both
+ * clusters at 1.248 GHz. CCI stays at its boot clock; its driver is disabled.
+ * No SRAM tracking or voltage-range changes are required for this stage.
+ */
+&cpu0 { proc-supply = <&mt6358_vproc12_reg>; };
+&cpu1 { proc-supply = <&mt6358_vproc12_reg>; };
+&cpu2 { proc-supply = <&mt6358_vproc12_reg>; };
+&cpu3 { proc-supply = <&mt6358_vproc12_reg>; };
+&cpu4 { proc-supply = <&mt6358_vproc11_reg>; };
+&cpu5 { proc-supply = <&mt6358_vproc11_reg>; };
+&cpu6 { proc-supply = <&mt6358_vproc11_reg>; };
+&cpu7 { proc-supply = <&mt6358_vproc11_reg>; };
+&cluster0_opp {
+ opp0-793000000 { opp-microvolt = <800000>; };
+ opp0-910000000 { opp-microvolt = <800000>; };
+ opp0-1014000000 { opp-microvolt = <800000>; };
+ opp0-1131000000 { opp-microvolt = <800000>; };
+ opp0-1248000000 { opp-microvolt = <800000>; };
+ opp0-1326000000 { status = "disabled"; };
+ opp0-1417000000 { status = "disabled"; };
+ opp0-1508000000 { status = "disabled"; };
+ opp0-1586000000 { status = "disabled"; };
+ opp0-1625000000 { status = "disabled"; };
+ opp0-1677000000 { status = "disabled"; };
+ opp0-1716000000 { status = "disabled"; };
+ opp0-1781000000 { status = "disabled"; };
+ opp0-1846000000 { status = "disabled"; };
+ opp0-1924000000 { status = "disabled"; };
+ opp0-1989000000 { status = "disabled"; };
+};
+&cluster1_opp {
+ opp1-793000000 { opp-microvolt = <800000>; };
+ opp1-910000000 { opp-microvolt = <800000>; };
+ opp1-1014000000 { opp-microvolt = <800000>; };
+ opp1-1131000000 { opp-microvolt = <800000>; };
+ opp1-1248000000 { opp-microvolt = <800000>; };
+ opp1-1326000000 { status = "disabled"; };
+ opp1-1417000000 { status = "disabled"; };
+ opp1-1508000000 { status = "disabled"; };
+ opp1-1586000000 { status = "disabled"; };
+ opp1-1625000000 { status = "disabled"; };
+ opp1-1677000000 { status = "disabled"; };
+ opp1-1716000000 { status = "disabled"; };
+ opp1-1781000000 { status = "disabled"; };
+ opp1-1846000000 { status = "disabled"; };
+ opp1-1924000000 { status = "disabled"; };
+ opp1-1989000000 { status = "disabled"; };
+};
+
+&pio {
+ trona_tcpc_irq_pin: trona-tcpc-irq-pin {
+  pins-irq {
+   pinmux = <PINMUX_GPIO41__FUNC_GPIO41>;
+   input-enable;
+   input-schmitt-enable;
+   bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+  };
+ };
+};
+
+/ { aliases { mmc0 = &mmc0; mmc1 = &mmc1; }; };
+&pio {
+ trona_sd_pins: trona-sd-pins {
+  pins-cmd-dat {
+   pinmux = <PINMUX_GPIO31__FUNC_MSDC1_CMD>, <PINMUX_GPIO32__FUNC_MSDC1_DAT0>,
+            <PINMUX_GPIO34__FUNC_MSDC1_DAT1>, <PINMUX_GPIO33__FUNC_MSDC1_DAT2>,
+            <PINMUX_GPIO30__FUNC_MSDC1_DAT3>;
+   input-enable; drive-strength = <6>; bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+  };
+  pins-clk {
+   pinmux = <PINMUX_GPIO29__FUNC_MSDC1_CLK>;
+   input-enable; drive-strength = <6>; bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+  };
+  pins-detect {
+   pinmux = <PINMUX_GPIO3__FUNC_GPIO3>;
+   input-enable; bias-pull-up;
+  };
+ };
+};
+&mmc1 {
+ status = "okay";
+ pinctrl-names = "default", "state_uhs";
+ pinctrl-0 = <&trona_sd_pins>; pinctrl-1 = <&trona_sd_pins>;
+ bus-width = <4>; max-frequency = <26000000>;
+ cd-gpios = <&pio 3 GPIO_ACTIVE_LOW>;
+ disable-wp; no-mmc; no-sdio; no-1-8-v;
+ vmmc-supply = <&mt6358_vmch_reg>; vqmmc-supply = <&mt6358_vmc_reg>;
+};
+
+#include "camera-id-gpio.dtsi"
+
+/* Stock Trona keymap: matrix index 0 = volume down, 1 = volume up. */
+&keyboard {
+ status = "okay"; keypad,num-rows = <1>; keypad,num-columns = <2>;
+ debounce-delay-ms = <32>;
+ linux,keymap = <0x00000072 0x00010073>;
+ pinctrl-names = "default"; pinctrl-0 = <&trona_volume_key_pins>;
+};
+&pio {
+ trona_volume_key_pins: volume-key-pins {
+  pins-row { pinmux = <PINMUX_GPIO92__FUNC_KPROW0>; bias-disable; };
+  pins-cols { pinmux = <PINMUX_GPIO93__FUNC_KPCOL0>, <PINMUX_GPIO94__FUNC_KPCOL1>; bias-pull-up = <MTK_PUPD_SET_R1R0_01>; input-enable; };
+ };
+};
+
+#include "camera-rear.dtsi"
+
+#include "camera-front.dtsi"

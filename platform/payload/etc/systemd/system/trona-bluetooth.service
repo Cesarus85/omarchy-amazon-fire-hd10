@@ -1,0 +1,14 @@
+[Unit]
+Description=Trona native Bluetooth HCI transport
+Requires=trona-wmt.service
+After=trona-wmt.service trona-wifi.service
+Before=bluetooth.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/modprobe trona_hci
+RemainAfterExit=yes
+TimeoutStartSec=30
+
+[Install]
+WantedBy=multi-user.target

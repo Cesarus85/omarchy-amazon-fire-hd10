@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+source /etc/profile.d/trona-usb-proxy.sh
+source /usr/share/omarchy/default/bash/env-bootstrap
+export HYPRLAND_NO_RT=1 QSG_RHI_BACKEND=opengl PAN_MESA_DEBUG=noafbc
+export LIBSEAT_BACKEND=seatd SEATD_VTBOUND=0 AQ_DRM_DEVICES=/dev/dri/card0
+systemctl --user import-environment http_proxy https_proxy no_proxy LIBSEAT_BACKEND SEATD_VTBOUND AQ_DRM_DEVICES HYPRLAND_NO_RT QSG_RHI_BACKEND PAN_MESA_DEBUG
+rm -f "$XDG_RUNTIME_DIR"/trona-session-[0-9]*
+exec uwsm start -g -1 -e -D Hyprland -- /usr/bin/Hyprland --config /usr/share/trona-platform/hypr/session.lua

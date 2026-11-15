@@ -1,0 +1,50 @@
+&{/front-camera-id} { status = "disabled"; };
+&mt6358_vcama1_reg { regulator-min-microvolt = <2800000>; regulator-max-microvolt = <2800000>; };
+&camera_gpio4 {
+ ov02b: camera@3c {
+  compatible = "ovti,ov02b10"; reg = <0x3c>;
+  pinctrl-names = "default"; pinctrl-0 = <&front_camera_id_pins>;
+  clocks = <&topckgen CLK_TOP_MUX_CAMTG2>; clock-names = "eclk";
+  assigned-clocks = <&topckgen CLK_TOP_MUX_CAMTG2>;
+  assigned-clock-parents = <&topckgen CLK_TOP_UNIVP_192M_D8>;
+  clock-frequency = <24000000>;
+  reset-gpios = <&pio 102 GPIO_ACTIVE_LOW>;
+  powerdown-gpios = <&pio 98 GPIO_ACTIVE_LOW>;
+  avdd-supply = <&mt6358_vcama1_reg>;
+  dovdd-supply = <&mt6358_vcamio_reg>;
+  orientation = <0>; rotation = <0>;
+  port { ov02b_ep: endpoint {
+   remote-endpoint = <&seninf_front_ep>;
+   clock-lanes = <0>; data-lanes = <1>;
+   link-frequencies = /bits/ 64 <330000000>;
+  }; };
+ };
+};
+&{/soc} {
+ camera_csi1: phy@11c82000 {
+  compatible = "mediatek,mt8183-csi-rx", "mediatek,mt8365-csi-rx";
+  reg = <0 0x11c82000 0 0x2000>;
+  num-lanes = <4>; phy-type = <PHY_TYPE_DPHY>; #phy-cells = <0>;
+ };
+ trona_camsv_front: camsv@1a051510 {
+  compatible = "mediatek,mt8183-camsv";
+  reg = <0 0x1a051510 0 0x40>, <0 0x1a051020 0 0x28>, <0 0x1a051220 0 0x90>;
+  interrupts = <GIC_SPI 259 IRQ_TYPE_LEVEL_LOW>;
+  clocks = <&camsys CLK_CAM_CAM>, <&camsys CLK_CAM_CAMTG>, <&camsys CLK_CAM_CAMSV1>;
+  clock-names = "cam", "camtg", "camsv";
+  iommus = <&iommu M4U_PORT_CAM_SOCO>, <&iommu M4U_PORT_CAM_SOC1>, <&iommu M4U_PORT_CAM_SOC2>, <&iommu M4U_PORT_CAM_IMGO>;
+  power-domains = <&spm MT8183_POWER_DOMAIN_CAM>;
+  ports { #address-cells = <1>; #size-cells = <0>;
+   port@0 { reg = <0>; camsv_front_ep: endpoint { remote-endpoint = <&seninf_front_out_ep>; }; };
+  };
+ };
+};
+&trona_seninf {
+ phys = <&camera_csi0 PHY_TYPE_DPHY>, <&camera_csi1>; phy-names = "csi0", "csi1";
+ ports {
+  port@1 { reg = <1>; seninf_front_ep: endpoint {
+   remote-endpoint = <&ov02b_ep>; clock-lanes = <2>; data-lanes = <1>;
+  }; };
+  port@5 { reg = <5>; seninf_front_out_ep: endpoint { remote-endpoint = <&camsv_front_ep>; }; };
+ };
+};

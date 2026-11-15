@@ -1,0 +1,42 @@
+#!/usr/bin/python3
+from pathlib import Path
+import sys
+p=Path(sys.argv[1]) if len(sys.argv)>1 else Path('/usr/share/omarchy/shell/plugins/dock/AppGrid.qml')
+s=p.read_text()
+if '// Swiping scrolls the app list;' in s:
+ print('Trona app-grid touch patch already present');raise SystemExit(0)
+for anchor in ['readonly property int screenMargin: Style.space(40)', 'preventStealing: true', 'boundsBehavior: Flickable.StopAtBounds', 'Math.min(panel.height - screenMargin * 2,', 'anchors.centerIn: parent\n      radius: Style.cornerRadius']:
+ if s.count(anchor)!=1:raise SystemExit('AppGrid changed upstream; Trona patch needs review: '+anchor)
+
+s=s.replace('import QtQuick\n','import QtQuick\nimport QtQuick.Controls\nimport Quickshell.Hyprland\n',1)
+s=s.replace('readonly property int screenMargin: Style.space(40)','''readonly property int screenMargin: 16
+  readonly property var reserved: panel.targetMonitor && panel.targetMonitor.lastIpcObject.reserved ? panel.targetMonitor.lastIpcObject.reserved : [0, 0, 0, 0]
+  readonly property real workTop: reserved[1] || 0
+  readonly property real workBottom: reserved[3] || 0
+  readonly property real workHeight: Math.max(200, panel.height - workTop - workBottom)
+  // Layer reservations change when the on-screen keyboard opens or closes.
+  Connections {
+    target: Hyprland
+    function onRawEvent(event) {
+      if (event.name === "openlayer" || event.name === "closelayer" || event.name === "configreloaded") refreshWorkArea.restart()
+    }
+  }
+  Timer { id: refreshWorkArea; interval: 120; onTriggered: Hyprland.refreshMonitors() }''')
+s=s.replace('Math.min(panel.height - screenMargin * 2,','Math.min(workHeight - screenMargin * 2,')
+s=s.replace('anchors.centerIn: parent\n      radius: Style.cornerRadius','anchors.horizontalCenter: parent.horizontalCenter\n      y: root.workTop + (root.workHeight - height) / 2\n      radius: Style.cornerRadius',1)
+s=s.replace('boundsBehavior: Flickable.StopAtBounds','''boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar {
+              policy: ScrollBar.AsNeeded
+              minimumSize: 0.08
+              width: 14
+            }''',1)
+s=s.replace('// The grid would otherwise take a dragging press for a scroll.\n                preventStealing: true','// Swiping scrolls the app list; hold an icon for its dock/menu actions.\n                preventStealing: false')
+s=s.replace('                  if (cell.moved) root.dragTo(cell.modelData, cell.mapToItem(panel.contentItem, event.x, event.y))','')
+s=s.replace('                onReleased: function(event) {','''                onPressAndHold: function(event) {
+                  if (cell.moved || grid.moving) return
+                  cell.moved = true
+                  root.openMenu(cell.modelData, cell.mapToItem(panel.contentItem, event.x, event.y))
+                }
+                onReleased: function(event) {''',1)
+tmp=p.with_suffix('.trona.tmp');tmp.write_text(s);tmp.chmod(p.stat().st_mode);tmp.replace(p)
+print('Trona app-grid touch patch applied')

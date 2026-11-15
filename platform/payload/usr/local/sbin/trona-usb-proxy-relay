@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+source /etc/trona-usb-proxy-host
+[[ $TRONA_USB_HOST =~ ^169\.254\.[0-9]+\.[0-9]+$ ]]
+exec /usr/bin/socat TCP-LISTEN:18080,bind=127.0.0.1,reuseaddr,fork "TCP:$TRONA_USB_HOST:18080,connect-timeout=15"

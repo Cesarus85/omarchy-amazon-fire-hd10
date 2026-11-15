@@ -1,0 +1,13 @@
+#!/usr/bin/python3
+"""Idempotent, board-restricted integration with the installed Omarchy helper."""
+from pathlib import Path
+if b'amazon,trona\0' not in Path('/sys/firmware/devicetree/base/compatible').read_bytes():
+    raise SystemExit('Amazon Trona only')
+p=Path('/usr/share/omarchy/bin/omarchy-bluetooth-device')
+s=p.read_text()
+marker='# Trona: desktop agent + direct BlueZ device calls.'
+if marker not in s:
+    if s.count('set -e\n') != 1 or 'action=${1:-}' not in s or 'bluetoothctl pair' not in s:
+        raise SystemExit('Omarchy Bluetooth helper changed; review integration')
+    s=s.replace('set -e\n', 'set -e\n\n'+marker+'\nexec /usr/local/bin/trona-bluetooth-device "$@"\n',1)
+    p.write_text(s)

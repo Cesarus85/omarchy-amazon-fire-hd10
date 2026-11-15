@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Kamera
+Comment=Front- und Rückkamera mit Fotos
+Exec=/usr/local/bin/trona-camera
+Icon=camera-photo
+Terminal=false
+Categories=AudioVideo;Video;Photography;
+StartupWMClass=trona-camera

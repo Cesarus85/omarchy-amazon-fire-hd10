@@ -1,0 +1,22 @@
+#include "trona-base.dtsi"
+&i2c1 { status = "disabled"; };
+/ {
+ aliases { i2c1 = &sensor_gpio1; };
+ sensor_gpio1: i2c-gpio-1 {
+  compatible = "i2c-gpio";
+  pinctrl-names = "default"; pinctrl-0 = <&trona_sensor_i2c_pins>;
+  sda-gpios = <&pio 81 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+  scl-gpios = <&pio 84 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+  i2c-gpio,delay-us = <5>;
+  #address-cells = <1>; #size-cells = <0>;
+  accelerometer@18 {
+   compatible = "sensortek,stk8ba53"; reg = <0x18>;
+   mount-matrix = "0", "1", "0", "1", "0", "0", "0", "0", "-1";
+  };
+ };
+};
+&pio {
+ trona_sensor_i2c_pins: sensor-i2c-pins {
+  pins-bus { pinmux = <PINMUX_GPIO81__FUNC_GPIO81>, <PINMUX_GPIO84__FUNC_GPIO84>; bias-pull-up; input-enable; };
+ };
+};

@@ -1,0 +1,20 @@
+[
+  "arch/arm64/kernel/Makefile",
+  "drivers/firmware/psci/Makefile",
+  "drivers/gpu/drm/sysfb/simpledrm.c",
+  "drivers/of/of_reserved_mem.c",
+  "drivers/phy/mediatek/phy-mtk-tphy.c",
+  "drivers/pmdomain/mediatek/mtk-pm-domains.c",
+  "drivers/rtc/rtc-mt6397.c",
+  "drivers/soc/mediatek/Makefile",
+  "drivers/thermal/mediatek/auxadc_thermal.c",
+  "drivers/usb/mtu3/mtu3_core.c",
+  "drivers/usb/typec/tcpm/tcpci.c",
+  "drivers/usb/typec/tcpm/tcpci_mt6370.c",
+  "drivers/watchdog/mtk_wdt.c",
+  "include/linux/usb/tcpci.h",
+  "sound/soc/mediatek/mt8183/mt8183-afe-pcm.c",
+  "drivers/soc/mediatek/trona-bootfb.c",
+  "arch/arm64/kernel/trona_cpu_power.c",
+  "drivers/usb/typec/tcpm/trona_charge_policy.h"
+]

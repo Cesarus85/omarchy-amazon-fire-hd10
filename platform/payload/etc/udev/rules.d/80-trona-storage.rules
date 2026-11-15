@@ -1,0 +1,4 @@
+# Internal firmware/Android partitions are not desktop-removable volumes.
+SUBSYSTEM=="block", KERNEL=="mmcblk0|mmcblk0p*|mmcblk0boot*", ENV{UDISKS_IGNORE}="1"
+# SD slot: expose ordinary filesystems to the desktop volume monitor.
+SUBSYSTEM=="block", KERNEL=="mmcblk1|mmcblk1p*", ENV{UDISKS_IGNORE}="0", ENV{UDISKS_SYSTEM}="0"

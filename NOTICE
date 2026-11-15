@@ -1,0 +1,25 @@
+Omarchy / Arch Linux ARM on Amazon Trona — community port source release.
+
+New port glue and documentation: Copyright (c) 2026 Stefan Maier.
+Unless explicitly marked otherwise, new files are licensed GPL-2.0-only.
+
+This is an aggregate of components with retained original notices:
+- Linux, MediaTek/Amazon/Motorola GPL kernel sources and adaptations:
+  GPL-2.0 or GPL-2.0-only as indicated by each file.
+- Board DTS: GPL-2.0 OR MIT where stated.
+- TECHO5-derived material: retain the supplied TECHO5 MIT notice; copied kernel
+  components retain their own upstream GPL notices.
+- Omarchy fragments used by checked patch scripts: MIT; see LICENSES/Omarchy-MIT.txt.
+- wvkbd patch targets: retain upstream MIT/Weston notices under LICENSES/.
+- tools/mkbootimg.py: Apache-2.0, Android Open Source Project.
+The root LICENSE supplies the GPLv2 text; it does not override a component's
+license, copyright or additional license notice.
+
+Changes include Linux 6.18 compatibility, Trona platform/resource integration,
+radio error-path handling, sensor wiring/tables, camera calibration, charging,
+standby, native boot/profile checks and touch-oriented desktop/lock integration.
+They are identified by the separate port repository and retained file comments.
+See CREDITS.md and drivers/connectivity/SOURCES.json for source revisions.
+
+No stock firmware, private calibration, Android partition image, account data
+or prebuilt device-specific installation package is redistributed here.

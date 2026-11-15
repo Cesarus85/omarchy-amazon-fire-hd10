@@ -1,0 +1,12 @@
+[Unit]
+Description=Trona touchscreen keyboard, portrait and landscape
+PartOf=graphical-session.target
+After=graphical-session-pre.target
+
+[Service]
+ExecStart=/usr/local/libexec/trona-keyboard
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

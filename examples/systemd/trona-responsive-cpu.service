@@ -1,0 +1,16 @@
+[Unit]
+Description=Trona responsive CPU policy within validated frequency limits
+Requires=trona-cpufreq-policy.service
+After=trona-cpufreq-policy.service
+Before=trona-desktop.service
+
+[Service]
+Type=oneshot
+RuntimeDirectory=trona-responsive-cpu
+RuntimeDirectoryMode=0700
+ExecStart=/usr/local/libexec/trona-responsive-cpu apply
+ExecStop=/usr/local/libexec/trona-responsive-cpu restore
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

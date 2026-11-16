@@ -40,3 +40,6 @@ with a fresh PIN. Check native Wi-Fi without a USB proxy. Check recording/playba
 both cameras and saving a photo. Test Power-off with USB in and out. Finally,
 repeat unplugged standby/wake, touch unlock, Wi-Fi and keyboard use over several
 cycles. Measure battery drain separately from a cable-powered screen-off test.
+
+For measured CPU response, rendering limitations and an optional reversible
+governor change, see [Performance](performance.md).

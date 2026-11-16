@@ -420,9 +420,9 @@ mmc0_pins_default: mmc0-default-pins {
  };
 };
 
-/* Stage 1 CPU DVFS: keep the proven 800 mV boot voltage and cap both
- * clusters at 1.248 GHz. CCI stays at its boot clock; its driver is disabled.
- * No SRAM tracking or voltage-range changes are required for this stage.
+/* Full CPU/CCI DVFS. MT6358 hardware tracks SRAM at Vproc + 100 mV.
+ * The board-specific regulator probe verifies tracking before registering rails.
+ * Keep a 700 mV floor (SRAM floor 900 mV); all higher OPPs are upstream values.
  */
 &cpu0 { proc-supply = <&mt6358_vproc12_reg>; };
 &cpu1 { proc-supply = <&mt6358_vproc12_reg>; };
@@ -432,41 +432,14 @@ mmc0_pins_default: mmc0-default-pins {
 &cpu5 { proc-supply = <&mt6358_vproc11_reg>; };
 &cpu6 { proc-supply = <&mt6358_vproc11_reg>; };
 &cpu7 { proc-supply = <&mt6358_vproc11_reg>; };
+&cci { proc-supply = <&mt6358_vproc12_reg>; };
 &cluster0_opp {
- opp0-793000000 { opp-microvolt = <800000>; };
- opp0-910000000 { opp-microvolt = <800000>; };
- opp0-1014000000 { opp-microvolt = <800000>; };
- opp0-1131000000 { opp-microvolt = <800000>; };
- opp0-1248000000 { opp-microvolt = <800000>; };
- opp0-1326000000 { status = "disabled"; };
- opp0-1417000000 { status = "disabled"; };
- opp0-1508000000 { status = "disabled"; };
- opp0-1586000000 { status = "disabled"; };
- opp0-1625000000 { status = "disabled"; };
- opp0-1677000000 { status = "disabled"; };
- opp0-1716000000 { status = "disabled"; };
- opp0-1781000000 { status = "disabled"; };
- opp0-1846000000 { status = "disabled"; };
- opp0-1924000000 { status = "disabled"; };
- opp0-1989000000 { status = "disabled"; };
+ opp0-793000000 { opp-microvolt = <700000>; };
+ opp0-910000000 { opp-microvolt = <700000>; };
 };
-&cluster1_opp {
- opp1-793000000 { opp-microvolt = <800000>; };
- opp1-910000000 { opp-microvolt = <800000>; };
- opp1-1014000000 { opp-microvolt = <800000>; };
- opp1-1131000000 { opp-microvolt = <800000>; };
- opp1-1248000000 { opp-microvolt = <800000>; };
- opp1-1326000000 { status = "disabled"; };
- opp1-1417000000 { status = "disabled"; };
- opp1-1508000000 { status = "disabled"; };
- opp1-1586000000 { status = "disabled"; };
- opp1-1625000000 { status = "disabled"; };
- opp1-1677000000 { status = "disabled"; };
- opp1-1716000000 { status = "disabled"; };
- opp1-1781000000 { status = "disabled"; };
- opp1-1846000000 { status = "disabled"; };
- opp1-1924000000 { status = "disabled"; };
- opp1-1989000000 { status = "disabled"; };
+&cci_opp {
+ opp-273000000 { opp-microvolt = <700000>; };
+ opp-338000000 { opp-microvolt = <700000>; };
 };
 
 &pio {
@@ -528,3 +501,10 @@ mmc0_pins_default: mmc0-default-pins {
 #include "camera-rear.dtsi"
 
 #include "camera-front.dtsi"
+
+/* Tablet enclosure: start allocation at 60 C and target 70 C (not the
+ * generic board's 80 C / 5 W). CPU/GPU cooling and critical trip stay enabled.
+ */
+&cpu_thermal { sustainable-power = <2500>; };
+&threshold { temperature = <60000>; };
+&target { temperature = <70000>; };

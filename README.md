@@ -10,7 +10,7 @@ Linux directly on the tablet rather than inside Android.
 
 ## What this project provides
 
-- A Linux **6.18.56 / trona-arch12** patch set, configuration and complete board
+- A Linux **6.18.56 / trona-arch14** patch set, configuration and complete board
   device-tree sources.
 - Adapted Wi-Fi/Bluetooth, audio, battery/power, accelerometer and camera drivers.
 - The tablet integration used with **Omarchy 4.5.0-3**: touch app grid,
@@ -34,6 +34,7 @@ boot-tested on a second tablet. Read the [installer requirements](docs/installer
 | Function | Result |
 |---|---|
 | Native ARM64 boot and internal ext4 storage | Working; all eight CPU cores |
+| CPU / CCI DVFS | 793–1989 MHz, voltage tracking and thermal limits; [qualification](docs/cpu-dvfs.md) |
 | Display, GPU and touch | Hyprland, Mesa Panfrost, 1200 × 1920 panel |
 | Orientation | Automatic and manual, four orientations; rotation lock |
 | On-screen keyboard | Show/hide, Super/Alt shortcuts; separate secure lock keyboard |

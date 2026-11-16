@@ -1,0 +1,94 @@
+{
+  "date": "2026-11-16",
+  "board": "Amazon Fire HD 10 2021 Trona 32GB 3GB RAM",
+  "kernel": "6.18.56-trona-arch14",
+  "platform": "2026.11.16-1",
+  "tests": [
+    {
+      "limit_khz": 1625000,
+      "duration_seconds": 90,
+      "transitions": false,
+      "passed": true,
+      "samples": 45,
+      "temperature_max_mC": 70750,
+      "frequency_max_khz": [
+        1625000,
+        1625000
+      ],
+      "rail_max_uV": {
+        "vproc11": 912000,
+        "vproc12": 906000,
+        "vsram_proc11": 1012000,
+        "vsram_proc12": 1006000
+      },
+      "cci_max_hz": 871000000
+    },
+    {
+      "limit_khz": 1989000,
+      "duration_seconds": 90,
+      "transitions": false,
+      "passed": true,
+      "samples": 45,
+      "temperature_max_mC": 72375,
+      "frequency_max_khz": [
+        1989000,
+        1989000
+      ],
+      "rail_max_uV": {
+        "vproc11": 1050000,
+        "vproc12": 1050000,
+        "vsram_proc11": 1150000,
+        "vsram_proc12": 1150000
+      },
+      "cci_max_hz": 1196000000
+    },
+    {
+      "limit_khz": 1989000,
+      "duration_seconds": 60,
+      "transitions": true,
+      "passed": true,
+      "samples": 110,
+      "temperature_max_mC": 72000,
+      "frequency_max_khz": [
+        1989000,
+        1989000
+      ],
+      "rail_max_uV": {
+        "vproc11": 1050000,
+        "vproc12": 1050000,
+        "vsram_proc11": 1150000,
+        "vsram_proc12": 1150000
+      },
+      "cci_max_hz": 1196000000
+    }
+  ],
+  "burst_comparison": [
+    {
+      "max_khz": 1248000,
+      "median_ms": 12.870999999999999,
+      "p95_ms": 14.669,
+      "temperature_mC": 45000
+    },
+    {
+      "max_khz": 1989000,
+      "median_ms": 11.877,
+      "p95_ms": 14.932,
+      "temperature_mC": 45750
+    },
+    {
+      "max_khz": 1248000,
+      "median_ms": 13.288,
+      "p95_ms": 15.204,
+      "temperature_mC": 44750
+    },
+    {
+      "max_khz": 1989000,
+      "median_ms": 11.8165,
+      "p95_ms": 14.969,
+      "temperature_mC": 47250
+    }
+  ],
+  "hotplug_cycles": 3,
+  "initial_thermal_abort": "Generic 80 C target test aborted at 75 C; 70 C target subsequently tested with 78 C cutoff.",
+  "physical_resume": "pending owner response"
+}

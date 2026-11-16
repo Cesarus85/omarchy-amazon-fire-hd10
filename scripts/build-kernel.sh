@@ -16,11 +16,12 @@ k="$build/linux-6.18.56"
 tar -xf "$archive" -C "$build"
 cd "$k"
 patch --batch -p1 < "$repo/kernel/linux-6.18.56-trona.patch"
+patch --batch -p1 < "$repo/kernel/dvfs.patch"
 cp "$repo"/kernel/dts/* arch/arm64/boot/dts/mediatek/
-cp "$repo/kernel/arch12.config" .config
+cp "$repo/kernel/arch14.config" .config
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 export KBUILD_BUILD_USER=trona KBUILD_BUILD_HOST=linux-build
-export KBUILD_BUILD_TIMESTAMP='2026-11-14 16:00:00 UTC' KBUILD_BUILD_VERSION=1
+export KBUILD_BUILD_TIMESTAMP='2026-11-16 20:00:00 UTC' KBUILD_BUILD_VERSION=1
 make -s olddefconfig
 make -s -j"${JOBS:-4}" Image.gz mediatek/mt8183-amazon-trona.dtb
 mkdir -p "$build/artifacts"

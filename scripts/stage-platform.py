@@ -28,7 +28,7 @@ for f in p.rglob('*'):
   f.chmod(f.stat().st_mode|0o200);f.write_text(render(f.read_text(),profile))
 firm=p/'usr/lib/firmware';firm.mkdir(parents=True)
 for name in fwmeta:shutil.copy2(args.firmware_dir/name,firm/name)
-mods=p/'usr/lib/modules/6.18.56-trona-arch12';(mods/'extra').mkdir(parents=True)
+mods=p/'usr/lib/modules/6.18.56-trona-arch14';(mods/'extra').mkdir(parents=True)
 for name in required:shutil.copy2(args.artifacts/'modules'/name,mods/'extra'/name)
 for name in ['modules.builtin','modules.builtin.modinfo']:
  shutil.copy2(args.artifacts/name,mods/name)

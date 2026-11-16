@@ -3,7 +3,7 @@
 import hashlib, json, os, subprocess, sys, tempfile, time
 from pathlib import Path
 BASE=Path('/usr/share/trona-platform')
-KERNEL='6.18.56-trona-arch12'
+KERNEL='6.18.56-trona-arch14'
 BOOT='/dev/mmcblk0p16'; RECOVERY='/dev/mmcblk0p17'
 EXPECTED={BOOT:'@BOOT_SHA256@',RECOVERY:'@RECOVERY_SHA256@'}
 UUID='@ROOT_UUID@'
@@ -123,11 +123,17 @@ def transaction_id():
   except (OSError,StopIteration):break
  fail('Kein pacman-Prozess gefunden')
 def guard_paths(targets,allowed):
+ abis=[KERNEL]
+ # One explicit platform migration: permit removal of the old packaged tree.
+ # Other kernels remain blocked; the normal pre-check still verifies boot,
+ # recovery, all current files and the exact installed dependencies.
+ if allowed and run('pacman','-Q','trona-platform')=='trona-platform 2026.11.15-7':
+  abis.append('6.18.56-trona-arch12')
  for item in targets:
   item=item.lstrip('/')
   if item.startswith('boot/') or item=='boot':fail('Generische Boot-Datei passt nicht zur nativen Trona-Bootkette: '+item)
   if item.startswith('usr/lib/modules/'):
-   if not allowed or (item != 'usr/lib/modules/' and not item.startswith('usr/lib/modules/'+KERNEL+'/')):fail('Kerneländerung braucht eine neue Trona-Portfreigabe: '+item)
+   if not allowed or (item != 'usr/lib/modules/' and not any(item.startswith('usr/lib/modules/'+abi+'/') for abi in abis)):fail('Kerneländerung braucht eine neue Trona-Portfreigabe: '+item)
 def main(mode):
  board()
  if mode=='protect':

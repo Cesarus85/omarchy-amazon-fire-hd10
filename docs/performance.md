@@ -1,13 +1,16 @@
 # Performance investigation and optional responsive CPU policy
 
+For the newer voltage-scaled kernel, see [full CPU DVFS](cpu-dvfs.md).
+The measurements below are the earlier arch12 baseline.
+
 Measured on the reference 32 GB Trona on 2026-11-16, running
 `6.18.56-trona-arch12`, Hyprland 0.57.2 and Mesa 26.2.7. These results describe
 one physical tablet, not a performance guarantee for other devices.
 
 ## Findings
 
-- The port still uses the conservative 793–1248 MHz CPU table at a fixed
-  800 mV on both clusters. Higher OPPs are intentionally disabled. Increasing
+- The arch12 baseline used the conservative 793–1248 MHz CPU table at a fixed
+  800 mV on both clusters. Higher OPPs were intentionally disabled. Increasing
   the frequency requires a separate voltage/SRAM/thermal qualification, not
   simply changing a maximum-frequency setting.
 - Hyprland and a fresh Google Chrome test profile both reported Mali-G72 MC3
@@ -99,10 +102,8 @@ do not establish that the freeze is fixed.
 
 ## Next substantial work
 
-1. Qualify normal CPU voltage/frequency scaling above the provisional 1.248 GHz
-   ceiling, including SRAM tracking, both clusters, temperature, suspend and
-   repeated cold boots. This is the most relevant next investigation for app
-   startup and CPU-heavy web apps.
+1. Full CPU/CCI DVFS is now implemented; see [qualification and limits](cpu-dvfs.md).
+   Longer everyday use and battery comparisons remain useful.
 2. Profile native display scanout versus the present simpledrm path before
    undertaking the display-driver port.
 3. Investigate the MediaTek video decoder and browser integration separately
@@ -117,11 +118,9 @@ The browser backend can be checked against the
 
 [MediaTek specifies the MT8183](https://www.mediatek.com/products/tablets/mt8183)
 with four Cortex-A73 and four Cortex-A53 cores, all up to 2 GHz, and a GPU up to
-800 MHz. The currently qualified port exposes only 793–1248 MHz CPU OPPs; its
-higher entries through 1989 MHz are disabled in `kernel/dts/trona-base.dtsi`.
-The GPU already exposes an 800 MHz maximum. Normal CPU operation scales with
-load and thermal limits; 2 GHz is a rated maximum, not a constant operating
-frequency. Moving from 1.248 to approximately 2 GHz means about 60% more clock,
-not a measured 60% improvement in application performance. This calls for proper
-CPU/SRAM voltage tracking and qualification within the rated range. No higher
-CPU frequencies were enabled during the performance or bar-layout work.
+800 MHz. The arch14 port now exposes all 16 CPU points through 1989 MHz,
+with CPU/SRAM voltage tracking and CCI scaling. The GPU already exposes an
+800 MHz maximum. Normal CPU operation scales with load and thermal limits;
+2 GHz is a rated maximum, not a constant operating frequency. About 60% more
+clock does not imply 60% faster apps. The original performance/bar-layout work
+used arch12; the later [DVFS qualification](cpu-dvfs.md) reports separate results.

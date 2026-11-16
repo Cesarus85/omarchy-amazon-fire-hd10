@@ -16,5 +16,6 @@
   "sound/soc/mediatek/mt8183/mt8183-afe-pcm.c",
   "drivers/soc/mediatek/trona-bootfb.c",
   "arch/arm64/kernel/trona_cpu_power.c",
-  "drivers/usb/typec/tcpm/trona_charge_policy.h"
+  "drivers/usb/typec/tcpm/trona_charge_policy.h",
+  "drivers/regulator/mt6358-regulator.c"
 ]

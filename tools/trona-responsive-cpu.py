@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Opt-in, reversible governor selection for the qualified Trona 800 mV table.
+"""Opt-in, reversible governor selection for qualified Trona CPU tables.
 
 No voltage, min/max frequency, thermal, or CPU-online writes. State belongs in
 /run so an interrupted session cannot restore settings from an earlier boot.
@@ -21,11 +21,11 @@ def validate(cpu=CPU, board=BOARD):
     policies = [cpu / 'policy0', cpu / 'policy4']
     for p in policies:
         frequencies = list(map(int, (p / 'scaling_available_frequencies').read_text().split()))
-        if frequencies != FREQUENCIES:
+        if frequencies not in (FREQUENCIES, FREQUENCIES + [1326000, 1417000, 1508000, 1586000, 1625000, 1677000, 1716000, 1781000, 1846000, 1924000, 1989000]):
             raise RuntimeError(f'{p.name}: unexpected CPU table; leaving policy unchanged')
         if (p / 'scaling_driver').read_text().strip() != 'mtk-cpufreq':
             raise RuntimeError(f'{p.name}: unexpected CPU driver')
-        for name, expected in [('cpuinfo_min_freq', 793000), ('cpuinfo_max_freq', 1248000)]:
+        for name, expected in [('cpuinfo_min_freq', 793000), ('cpuinfo_max_freq', frequencies[-1])]:
             if int((p / name).read_text()) != expected:
                 raise RuntimeError(f'{p.name}: unexpected hardware frequency limit')
         if 'ondemand' not in (p / 'scaling_available_governors').read_text().split():

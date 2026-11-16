@@ -28,7 +28,7 @@ is checked against the recorded SHA256 before extraction. Its source is
 
 Outputs: `Image.gz`, `trona.dtb`, recorded kernel config, builtin module
 metadata and all modules listed in `kernel/modules.json`. The core image uses
-the arch12 configuration; media modules are subsequently built with the
+the arch14 configuration; media modules are subsequently built with the
 recorded media configuration, matching the original development arrangement.
 Do not substitute modules from a distribution kernel with a similar version.
 
@@ -127,3 +127,6 @@ configured tablet or in a compatible Qt environment; the fixture points to the
 installed canonical keyboard path.
 
 See [validation.md](validation.md) for what was actually run for this release.
+
+The additional `kernel/dvfs.patch` validates MT6358 SRAM tracking for the
+[full CPU DVFS platform](cpu-dvfs.md); `arch14.config` enables CCI devfreq.

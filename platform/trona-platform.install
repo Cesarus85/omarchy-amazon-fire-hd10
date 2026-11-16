@@ -2,7 +2,7 @@ post_install() {
   visudo -cf /etc/sudoers.d/00-trona-admin || return 1
   rm -f /etc/sudoers.d/trona-bringup
   rm -f /etc/systemd/system/serial-getty@ttyGS0.service.d/autologin.conf
-  depmod 6.18.56-trona-arch12
+  depmod 6.18.56-trona-arch14
   systemctl daemon-reload
   systemctl enable trona-boot-guard.service
   # Move only identical integration units into package ownership. User edits survive.

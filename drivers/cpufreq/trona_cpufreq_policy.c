@@ -49,6 +49,11 @@ static int __init trona_policy_init(void)
 {
  int i,ret;
  if(!of_machine_is_compatible("amazon,trona"))return -ENODEV;
+ /* Full DVFS has a meaningful energy model; do not override its flags. */
+ if (of_property_read_bool(of_root, "trona,full-cpu-dvfs")) {
+  pr_info("Trona: full voltage scaling; legacy flat-voltage workaround skipped\n");
+  return 0;
+ }
  for(i=0;i<2;i++){
   policies[i]=cpufreq_cpu_get(i*4);
   if(!policies[i]){ret=-EPROBE_DEFER;goto fail;}

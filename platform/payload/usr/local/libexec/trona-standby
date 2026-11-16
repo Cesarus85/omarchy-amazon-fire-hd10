@@ -100,7 +100,7 @@ class Standby:
    fd=os.open('/sys/power/wakeup_count',os.O_RDONLY|os.O_NONBLOCK)
    try:count=os.read(fd,64).decode().strip()
    finally:os.close(fd)
-   if os.uname().release=='6.18.56-trona-arch12':
+   if os.uname().release in ('6.18.56-trona-arch12','6.18.56-trona-arch14'):
     # Record the restoration intent before the first CPU is offlined.
     # CPU0 remains available for PMIC/RTC wake; only restore prior online CPUs.
     s['offline_cpus']=[cpu for cpu in range(1,8) if pathlib.Path(f'/sys/devices/system/cpu/cpu{cpu}/online').read_text().strip()=='1']

@@ -1,4 +1,26 @@
-# Source-release validation — 2026-11-15
+# Source and device validation
+
+## CPU DVFS platform — 2026-11-16
+
+The arch14 kernel, complete 28-module set and device tree were rebuilt, installed
+through the guarded native-boot/package paths and rebooted on the reference
+tablet. See [CPU DVFS](cpu-dvfs.md) and the [measurement summary](evidence/cpu-dvfs-2026-11-16.json).
+
+| Current artifact | SHA256 |
+|---|---|
+| Image.gz | 9e1b01c52e8c9bf1a03f583449f6aaec45c9bc82bb40eee61083213aef59eaad |
+| trona.dtb | b49354adef09ad046b8769755add3fbd0c123c1bea7c979854e9d9b34fe1c899 |
+
+The current builds used the existing source build tree. A second independent
+clean-build hash reproduction has not been performed for arch14. The older
+bit-identical clean-build evidence below applies specifically to arch12.
+
+Governor-policy tests cover the exact full table and reject extra OPPs. Update
+guard tests cover the one permitted arch12-to-arch14 package migration and
+rejection of other kernel trees. The 16 Linux installer tests, including the
+independent sfdisk check, pass; this still is not a second-tablet install test.
+
+## Original source release — 2026-11-15
 
 ## Reference-device evidence
 

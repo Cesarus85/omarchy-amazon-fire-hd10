@@ -70,7 +70,7 @@ package=$(cat "$root/tmp/trona-package.path")
 bsdtar --numeric-owner --exclude .PKGINFO --exclude .BUILDINFO --exclude .MTREE --exclude .INSTALL \
   -xpf "$root$package" -C "$root"
 python3 /src/installer/finalize-root.py "$root" /output
-chroot "$root" depmod 6.18.56-trona-arch12
+chroot "$root" depmod 6.18.56-trona-arch14
 chroot "$root" visudo -cf /etc/sudoers.d/00-trona-admin
 chroot "$root" systemctl enable seatd trona-desktop trona-boot-guard trona-radio-platform \
   trona-wmt trona-wifi trona-bluetooth bluetooth NetworkManager trona-battery \

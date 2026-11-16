@@ -1,6 +1,7 @@
 #include "trona-base.dtsi"
 &i2c1 { status = "disabled"; };
 / {
+ trona,full-cpu-dvfs;
  aliases { i2c1 = &sensor_gpio1; };
  sensor_gpio1: i2c-gpio-1 {
   compatible = "i2c-gpio";

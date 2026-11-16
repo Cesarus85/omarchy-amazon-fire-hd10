@@ -5,7 +5,7 @@ repo=$(cd "$(dirname "$0")/.." && pwd)
 build=$(cd "${1:?Usage: build-modules.sh BUILD_DIRECTORY}" && pwd)
 k="$build/linux-6.18.56"
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
-[[ $(cat "$k/include/config/kernel.release") == 6.18.56-trona-arch12 ]]
+[[ $(cat "$k/include/config/kernel.release") == 6.18.56-trona-arch14 ]]
 mkdir -p "$build/external" "$build/artifacts/modules"
 cp -a "$repo/drivers/." "$build/external/"
 # Media modules are prepared with their own recorded config, as on the tablet.

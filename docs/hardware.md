@@ -9,7 +9,7 @@ Status recorded on 2026-11-15:
 | Component | Evidence | Remaining limitation |
 |---|---|---|
 | Boot / storage | Repeated cold/warm starts, ext4 checks, read/write/fsync tests | No independent second-device installation |
-| CPU | Eight cores, frequency policy and hotplug during standby | No exhaustive stress/thermal campaign |
+| CPU | Eight cores, 793–1989 MHz CPU/CCI DVFS; [load/thermal tests](cpu-dvfs.md) | Short qualification, not a multi-day stress campaign |
 | Panel | Bootloader scanout retained, framebuffer reservation and DRM fixes | Not a complete native DSI panel driver; depends on LK initialization |
 | GPU | Panfrost GLES tests, Weston and Hyprland; Mesa update survived | No claim of hardware video decoding or Vulkan coverage |
 | Touch | FT8201/EDT driver, physical typing in both orientations | Multi-touch gestures vary by app |

@@ -1,0 +1,2 @@
+# Unified patches contain a diff prefix before original whitespace.
+*.patch -whitespace

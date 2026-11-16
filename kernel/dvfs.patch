@@ -1,0 +1,61 @@
+--- a/drivers/regulator/mt6358-regulator.c
++++ b/drivers/regulator/mt6358-regulator.c
+@@ -680,6 +680,47 @@
+ 	return 0;
+ }
+ 
++/* Trona boots with MT6358 hardware VSRAM tracking enabled. Keep that
++ * mechanism (as on MT8183 Kukui), but extend the upper clamp for the upstream
++ * 1.05 V CPU OPP: VSRAM must reach 1.15 V. Never silently use a different
++ * firmware tracking mode. The 900 mV lower clamp pairs with our 700 mV floor.
++ */
++static int trona_cpu_tracking(struct device *dev, struct regmap *map)
++{
++ static const unsigned int base[] = {
++  MT6358_LDO_VSRAM_PROC11_TRACKING_CON0,
++  MT6358_LDO_VSRAM_PROC12_TRACKING_CON0,
++ };
++ unsigned int control, offset, limits, readback;
++ int i, ret;
++
++ if (!of_machine_is_compatible("amazon,trona"))
++  return 0;
++ /* Validate both rails before changing either. */
++ for (i = 0; i < ARRAY_SIZE(base); i++) {
++  ret = regmap_read(map, base[i], &control);
++  if (ret) return ret;
++  ret = regmap_read(map, base[i] + 2, &offset);
++  if (ret) return ret;
++  ret = regmap_read(map, base[i] + 4, &limits);
++  if (ret) return ret;
++  if ((control & 7) != 6 || (offset & 0x7f7f) != 0x1000 ||
++      ((limits & 0x7f7f) != 0x6340 &&
++       (limits & 0x7f7f) != 0x6840))
++   return dev_err_probe(dev, -EINVAL, "Unexpected Trona CPU SRAM tracking\n");
++ }
++ for (i = 0; i < ARRAY_SIZE(base); i++) {
++  ret = regmap_update_bits(map, base[i] + 4, 0x7f00, 0x6800);
++  if (ret) return ret;
++  ret = regmap_read(map, base[i] + 4, &readback);
++  if (ret) return ret;
++  if ((readback & 0x7f7f) != 0x6840)
++   return -EIO;
++ }
++ dev_info(dev, "Trona CPU SRAM tracking: +100 mV, clamps 900..1150 mV\n");
++ return 0;
++}
++
+ static int mt6358_regulator_probe(struct platform_device *pdev)
+ {
+ 	struct mt6397_chip *mt6397 = dev_get_drvdata(pdev->dev.parent);
+@@ -702,6 +743,10 @@
+ 		return -EINVAL;
+ 	}
+ 
++	ret = trona_cpu_tracking(&pdev->dev, mt6397->regmap);
++	if (ret)
++		return ret;
++
+ 	ret = mt6358_sync_vcn33_setting(&pdev->dev);
+ 	if (ret)
+ 		return ret;

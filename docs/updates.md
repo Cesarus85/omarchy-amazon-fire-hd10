@@ -12,7 +12,8 @@ The platform package currently requires:
 | Hyprland | 0.57.2-1 |
 | Quickshell | 0.3.2.r7.g2b4501a-1 |
 | libcamera / IPA / GStreamer plugin | 0.7.2-4 |
-| Native kernel | 6.18.56-trona-arch12 |
+| Native kernel | 6.18.56-trona-arch14 |
+| Trona platform package | 2026.11.16-1 |
 
 Mesa 26.2.7 and the tested Qt update worked with this set. Future versions are
 not automatically qualified.
@@ -59,3 +60,8 @@ No automatic recovery from interrupted package transactions or encrypted-data
 rollback is implemented. Boot/kernel updates are a separate reviewed operation.
 The source release's newly parameterized build/staging tools have not themselves
 been installed on a second tablet.
+
+The arch14 CPU-DVFS migration is an explicit platform update. The path guard
+allows removal of arch12 modules only while upgrading the exact previous
+`trona-platform 2026.11.15-7` package. It does not allow arbitrary old kernels
+or generic boot payloads. See [CPU qualification](cpu-dvfs.md).

@@ -66,6 +66,22 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(self.governors(), ['schedutil'] * 2)
         self.assertFalse(self.state.exists())
 
+    def test_full_nominal_table_and_unknown_extra_opp(self):
+        full = m.FREQUENCIES + [1326000, 1417000, 1508000, 1586000, 1625000,
+                              1677000, 1716000, 1781000, 1846000, 1924000, 1989000]
+        for n in (0, 4):
+            p = self.cpu / f'policy{n}'
+            (p / 'scaling_available_frequencies').write_text(' '.join(map(str, full)))
+            (p / 'cpuinfo_max_freq').write_text('1989000')
+        m.apply(self.cpu, self.board, self.state)
+        self.assertEqual(self.governors(), ['ondemand'] * 2)
+        m.restore(self.cpu, self.board, self.state)
+        (self.cpu / 'policy4/scaling_available_frequencies').write_text(' '.join(map(str, full + [2100000])))
+        with self.assertRaises(RuntimeError):
+            m.apply(self.cpu, self.board, self.state)
+        self.assertEqual(self.governors(), ['schedutil'] * 2)
+        self.assertFalse(self.state.exists())
+
     def test_preserves_later_external_policy_change(self):
         m.apply(self.cpu, self.board, self.state)
         (self.cpu / 'policy4/scaling_governor').write_text('performance')

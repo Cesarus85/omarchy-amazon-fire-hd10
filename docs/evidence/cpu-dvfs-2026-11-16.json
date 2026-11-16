@@ -90,5 +90,38 @@
   ],
   "hotplug_cycles": 3,
   "initial_thermal_abort": "Generic 80 C target test aborted at 75 C; 70 C target subsequently tested with 78 C cutoff.",
-  "physical_resume": "pending owner response"
+  "physical_resume": {
+    "owner_confirmed": [
+      "power_wake",
+      "touch_unlock",
+      "wifi",
+      "paired_logitech_keyboard"
+    ],
+    "sleep_seconds": 20.559250831604004,
+    "mode": "s2idle",
+    "offlined_cpus": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "online_after": "0-7",
+    "governors_after": [
+      "ondemand",
+      "ondemand"
+    ],
+    "max_khz_after": [
+      1989000,
+      1989000
+    ],
+    "sram_tracking_after": [
+      "0x0006/0x6840",
+      "0x0006/0x6840"
+    ],
+    "platform_integrity": "passed",
+    "package_files_altered": 0
+  }
 }

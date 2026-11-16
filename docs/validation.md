@@ -4,7 +4,8 @@
 
 The arch14 kernel, complete 28-module set and device tree were rebuilt, installed
 through the guarded native-boot/package paths and rebooted on the reference
-tablet. See [CPU DVFS](cpu-dvfs.md) and the [measurement summary](evidence/cpu-dvfs-2026-11-16.json).
+tablet. The owner also confirmed Power-key wake, touch unlock, Wi-Fi and the
+paired keyboard after USB-disconnected s2idle; post-resume integrity passed. See [CPU DVFS](cpu-dvfs.md) and the [measurement summary](evidence/cpu-dvfs-2026-11-16.json).
 
 | Current artifact | SHA256 |
 |---|---|

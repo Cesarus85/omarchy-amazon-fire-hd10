@@ -75,6 +75,10 @@ competes for execution time and consumes the shared thermal budget. The
 qualification workload is stopped after each test and is not a background
 service on the installed tablet.
 
-The physical USB-disconnected Power-key suspend/resume check for arch14 is
-still awaiting the owner response. Earlier standby acceptance was on arch12;
-reboot and hotplug tests alone do not close this remaining gate.
+The owner confirmed USB-disconnected Power-key suspend/resume with arch14,
+touch unlock, Wi-Fi and the paired Logitech keyboard. Logs show 20.56 seconds
+in s2idle with CPUs 1–7 offlined; all eight cores, both ondemand policies and
+1989 MHz ceilings returned. PMIC SRAM tracking settings were retained. The
+post-resume integrity check passed; pacman reports 178 package entries and
+zero altered files. This closes the short physical acceptance test, not a
+long-term battery or reliability study.

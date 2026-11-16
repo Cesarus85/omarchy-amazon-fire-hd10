@@ -1,6 +1,6 @@
 pkgname=trona-platform
 pkgver=2026.11.16
-pkgrel=2
+pkgrel=3
 pkgdesc='Amazon Fire HD10 Trona native kernel modules, tablet integration and update guards'
 arch=('aarch64')
 license=('custom')

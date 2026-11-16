@@ -64,6 +64,9 @@ def repair_user():
  p=HOME/'.config/hypr/hyprland.lua';s=p.read_text()
  if 'require("hypr.trona-rotation")' not in s:
   atomic(p,s+'\nrequire("hypr.trona-rotation")\n')
+ s=p.read_text()
+ include='dofile("/usr/share/trona-platform/hypr/trona-windows.lua")'
+ if include not in s:atomic(p,s+'\n'+include+'\n')
  p=HOME/'.config/omarchy/shell.json';data=json.loads(p.read_text())
  bar=data.setdefault('bar',{});bar['locked']=True;bar['position']='top'
  layout=bar.setdefault('layout',{});left=layout.setdefault('left',[])
@@ -111,6 +114,7 @@ def integration_check():
  '/home/trona/.config/hypr/trona-rotation.lua':'/usr/share/trona-platform/hypr/trona-rotation.lua'}
  for path,marker in checks.items():
   if marker not in Path(path).read_text():fail('Tablet-Integration fehlt: '+path)
+ if 'dofile("/usr/share/trona-platform/hypr/trona-windows.lua")' not in (HOME/'.config/hypr/hyprland.lua').read_text():fail('Tablet window rules missing')
  data=json.loads((HOME/'.config/omarchy/shell.json').read_text())
  if data['bar'].get('position')!='top' or data['bar'].get('locked') is not True:fail('Tablet-Leiste entsperrt/verschoben')
 def record(status,detail):

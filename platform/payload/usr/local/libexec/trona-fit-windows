@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Clamp floating windows to the panel work area; sleep until compositor events."""
+"""Fill tablet app windows and clamp dialogs; sleep until compositor events."""
 import json,os,pathlib,socket,subprocess,sys,time
 
 def hypr(*args):
@@ -15,7 +15,11 @@ def fit():
   l,t,r,b=m['reserved'];pad=12
   x0=m['x']+l+pad;y0=m['y']+t+pad
   mw=max(100,int(pw/m['scale']-l-r-2*pad));mh=max(100,int(ph/m['scale']-t-b-2*pad))
-  width,height=min(w['size'][0],mw),min(w['size'][1],mh)
+  # Omarchy's floating workspace owns these regular app windows. Keep them
+  # usable on a tablet instead of its desktop-sized 64% by 68% cascade.
+  # Dialogs, PiP and deliberately floated windows do not carry this tag.
+  fill='omarchy-mode-floated' in w.get('tags',[]) and not w.get('pinned',False)
+  width,height=(mw,mh) if fill else (min(w['size'][0],mw),min(w['size'][1],mh))
   x=max(x0,min(w['at'][0],x0+mw-width));y=max(y0,min(w['at'][1],y0+mh-height))
   target=json.dumps('address:'+w['address']); commands=[]
   if [width,height]!=w['size']:commands.append(f'hl.dispatch(hl.dsp.window.resize({{x={width},y={height},relative=false,window={target}}}))')
@@ -33,7 +37,7 @@ def main():
  ready=False
  try:fit();ready=True
  except (subprocess.SubprocessError,ValueError,KeyError):pass
- events={'openwindow','changefloatingmode','configreloaded','monitoraddedv2','openlayer','closelayer','movewindowv2'}
+ events={'openwindow','changefloatingmode','configreloaded','monitoraddedv2','openlayer','closelayer','movewindowv2','fullscreen'}
  for line in sock.makefile():
   if not ready or line.partition('>>')[0] in events:
    time.sleep(.15) # one-shot settle for the triggering layout change

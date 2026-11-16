@@ -45,7 +45,8 @@ In an AArch64 Arch build environment, install the normal build dependencies:
 userspace/wvkbd/build.sh "$PWD/local/wvkbd"
 ```
 
-The script obtains wvkbd v0.16 and applies the included layout patch. It does not
+The script obtains wvkbd v0.16 and applies the included layout and IME keymap
+patches. It does not
 install the result. Supply `local/wvkbd/wvkbd-mobintl` to the package-staging
 script. The secure password keyboard is QML and is already in the payload.
 

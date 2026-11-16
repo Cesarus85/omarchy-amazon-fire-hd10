@@ -17,6 +17,8 @@
 | Wi-Fi password field covered | External wvkbd overlay plus patched Omarchy keyboard-panel layer |
 | Bar moves accidentally | Managed bar position/top lock and current Omarchy patch |
 | Oversized app dialog | Tablet scale control and window-fit service; app-specific minimum sizes can still be limiting |
+| Apps open as small floating windows | Platform 2026.11.16-3 fills regular floating-workspace apps; ordinary tiled apps open maximized. Dialogs and manually floated windows retain their sizing |
+| OSK emojis open a context menu or repeat the first emoji | Rebuild wvkbd with both included patches; the IME keymap workaround preserves Fcitx. See [tablet window and emoji fixes](tablet-windows-and-emojis.md) |
 | SD unmountable | Determine filesystem first. Android-adopted storage is encrypted; exFAT formatting erases it |
 | Update blocked | Read trona-update-check output and exact dependency constraints; do not bypass |
 

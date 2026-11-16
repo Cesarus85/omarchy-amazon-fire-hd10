@@ -53,3 +53,5 @@ systemctl --user enable trona-auto-rotate.service trona-keyboard.service \
 
 Do not run the shell or camera app as root. An SD card is optional; the private
 profile should use its own filesystem UUID or `NO-SD-CARD`.
+
+For a less crowded bar at tablet scales, see [Compact tablet bar](compact-bar.md).

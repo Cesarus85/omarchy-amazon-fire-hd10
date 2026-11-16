@@ -112,3 +112,16 @@ The standard governor and policy lifecycle are documented in the
 [Linux CPU performance-scaling documentation](https://docs.kernel.org/admin-guide/pm/cpufreq.html).
 The browser backend can be checked against the
 [Chromium Ozone documentation](https://chromium.googlesource.com/chromium/src/+/main/docs/ozone_overview.md).
+
+## CPU specification versus current port limit
+
+[MediaTek specifies the MT8183](https://www.mediatek.com/products/tablets/mt8183)
+with four Cortex-A73 and four Cortex-A53 cores, all up to 2 GHz, and a GPU up to
+800 MHz. The currently qualified port exposes only 793–1248 MHz CPU OPPs; its
+higher entries through 1989 MHz are disabled in `kernel/dts/trona-base.dtsi`.
+The GPU already exposes an 800 MHz maximum. Normal CPU operation scales with
+load and thermal limits; 2 GHz is a rated maximum, not a constant operating
+frequency. Moving from 1.248 to approximately 2 GHz means about 60% more clock,
+not a measured 60% improvement in application performance. This calls for proper
+CPU/SRAM voltage tracking and qualification within the rated range. No higher
+CPU frequencies were enabled during the performance or bar-layout work.

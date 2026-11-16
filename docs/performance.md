@@ -89,6 +89,14 @@ A full reboot, complete suspend/resume cycle and long-term battery comparison
 with this new policy have not yet been repeated. Subjective app switching is
 a separate user acceptance check.
 
+## Memory-pressure follow-up
+
+The owner reported slightly smoother operation, then reproduced a freeze that
+had also occurred the previous day. Desktop eviction into compressed swap was
+observed during heavy application launches. See [Memory pressure](memory-pressure.md)
+for the separate mitigation and its validation boundaries. CPU burst gains
+do not establish that the freeze is fixed.
+
 ## Next substantial work
 
 1. Qualify normal CPU voltage/frequency scaling above the provisional 1.248 GHz

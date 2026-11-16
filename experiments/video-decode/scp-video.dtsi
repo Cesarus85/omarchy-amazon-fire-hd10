@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/* FAILED decoder qualification on Trona. Not included by the normal build.
+ * Append after mt8183-amazon-trona.dts only in a separate experiment.
+ * The firmware ELF requires DRAM at 0x50000000. Its 5 MiB coherent allocation
+ * needs an 8 MiB pool (power-of-two DMA allocation). Never apply this as a
+ * live overlay: Linux must reserve the memory before using it as normal RAM.
+ */
+/ {
+ reserved-memory {
+  scp_video_reserved: memory@50000000 {
+   compatible = "shared-dma-pool";
+   reg = <0 0x50000000 0 0x800000>;
+   no-map;
+  };
+ };
+};
+&scp {
+ memory-region = <&scp_video_reserved>;
+ firmware-name = "mediatek/mt8183/scp.img";
+ status = "okay";
+};

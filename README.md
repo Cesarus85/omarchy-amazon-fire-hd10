@@ -6,7 +6,7 @@ Linux directly on the tablet rather than inside Android.
 
 [Deutsch](docs/README.de.md) · [Hardware status](docs/hardware.md) ·
 [Guided installer](docs/installer.md) · [Build](docs/build.md) · [Installation details](docs/install.md) ·
-[Updates](docs/updates.md) · [Architecture](docs/architecture.md)
+[Updates](docs/updates.md) · [Architecture](docs/architecture.md) · [Roadmap](docs/roadmap.md)
 
 ## What this project provides
 

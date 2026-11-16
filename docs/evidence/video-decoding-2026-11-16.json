@@ -1,0 +1,51 @@
+{
+  "date": "2026-11-16",
+  "board": "amazon,trona / MT8183",
+  "kernel": "6.18.56-trona-arch14",
+  "status": "hardware_decode_failed_not_enabled",
+  "baseline": {
+    "browser": "157.0.8103.78",
+    "mesa": "26.2.7",
+    "sample": "synthetic 1920x1080 30fps H.264 High, 12-second loop",
+    "decoder": "FFmpegVideoDecoder",
+    "platform_decoder": false,
+    "hardware_profiles": [],
+    "cpu_sample_seconds": 20.002134997000212,
+    "chrome_cpu_percent_one_core": 138.9851633546582,
+    "player_lifetime_frames": 734,
+    "player_lifetime_dropped_frames": 23,
+    "caveats": [
+      "Frame counters include startup and differ from CPU sampling interval",
+      "Windowed synthetic clip, not fullscreen YouTube",
+      "A short native compilation overlapped part of first probe"
+    ]
+  },
+  "bringup": {
+    "same_kernel_executable": true,
+    "dt_pool_bytes": 8388608,
+    "scp_running": true,
+    "decoder_node_registered": true,
+    "owner_confirmed_desktop": true
+  },
+  "decode": {
+    "gstreamer_h264": "failed despite EOS",
+    "ffmpeg_vaapi_bridge": "360 decode errors; 2 identical output-frame checksums",
+    "firmware_error_decimal": 196738,
+    "firmware_error_hex": "0x30082",
+    "480p_baseline": "same failure",
+    "older_official_firmware": "same failure",
+    "31_bit_dma_mask": "same failure",
+    "larb_runtime_power_forced_on_temporarily": "same failure",
+    "decoder_irqs": 0
+  },
+  "restoration": {
+    "original_boot_restored_and_rebooted": true,
+    "scp_disabled": true,
+    "test_modules_not_loaded": true,
+    "test_files_removed_from_tablet": true,
+    "update_integrity_check": "passed",
+    "platform_files_checked": 183,
+    "platform_files_altered": 0,
+    "failed_system_units": 0
+  }
+}

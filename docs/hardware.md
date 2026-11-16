@@ -12,6 +12,7 @@ Status recorded on 2026-11-15:
 | CPU | Eight cores, 793–1989 MHz CPU/CCI DVFS; [load/thermal tests](cpu-dvfs.md) | Short qualification, not a multi-day stress campaign |
 | Panel | Bootloader scanout retained, framebuffer reservation and DRM fixes | Not a complete native DSI panel driver; depends on LK initialization |
 | GPU | Panfrost GLES tests, Weston and Hyprland; Mesa update survived | No claim of hardware video decoding or Vulkan coverage |
+| Video decoder | Experimental SCP and V4L2 decoder enumeration | H.264 decoding fails; [investigation](video-decoding.md). Disabled in normal builds |
 | Touch | FT8201/EDT driver, physical typing in both orientations | Multi-touch gestures vary by app |
 | Rotation | STK8BA53 IIO, all four orientations, keyboard/bar/camera follow | Flat/diagonal/accelerating poses intentionally keep orientation |
 | Lock | PAM, wrong-password rejection, touch unlock, reboot and standby | Recovery remains accessible; storage not encrypted |

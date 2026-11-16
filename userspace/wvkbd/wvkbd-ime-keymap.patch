@@ -1,11 +1,12 @@
 --- a/keyboard.h
 +++ b/keyboard.h
-@@ -117,6 +117,8 @@
+@@ -117,6 +117,9 @@
  	struct drwsurf *surf;
  	struct drwsurf *popup_surf;
  	struct zwp_virtual_keyboard_v1 *vkbd;
 +	struct zwp_virtual_keyboard_manager_v1 *vkbd_mgr;
 +	struct wl_seat *seat;
++	bool unicode_keymap;
  
  	uint32_t last_popup_x, last_popup_y, last_popup_w, last_popup_h;
  };
@@ -35,16 +36,56 @@
  #include <stdio.h>
  #include <sys/mman.h>
  #include <ctype.h>
-@@ -693,7 +694,7 @@
+@@ -298,7 +299,7 @@
+         }
+ 
+         if (kb->last_press->type == Copy) {
+-            zwp_virtual_keyboard_v1_key(kb->vkbd, time, 127, // COMP key
++            zwp_virtual_keyboard_v1_key(kb->vkbd, time, KEY_A, // printable carrier for Unicode
+                                         WL_KEYBOARD_KEY_STATE_RELEASED);
+         } else {
+             if ((kb->last_press->code == KEY_SPACE) && unlatch_shift &&
+@@ -398,6 +399,9 @@
+ 
+     switch (k->type) {
+     case Code:
++        if (kb->unicode_keymap) {
++            create_and_upload_keymap(kb, kb->layout->keymap_name, 0, 0);
++        }
+         if (k->code_mod) {
+             if (k->reset_mod) {
+                 zwp_virtual_keyboard_v1_modifiers(kb->vkbd, k->code_mod, 0, 0,
+@@ -495,7 +499,7 @@
+         create_and_upload_keymap(kb, kb->layout->keymap_name, k->code,
+                                  k->code_mod);
+         zwp_virtual_keyboard_v1_modifiers(kb->vkbd, kb->mods, 0, 0, 0);
+-        zwp_virtual_keyboard_v1_key(kb->vkbd, time, 127, // COMP key
++        zwp_virtual_keyboard_v1_key(kb->vkbd, time, KEY_A, // printable carrier for Unicode
+                                     WL_KEYBOARD_KEY_STATE_PRESSED);
+         if (kb->print || kb->print_intersect)
+             kbd_print_key_stdout(kb, k);
+@@ -693,7 +697,19 @@
      size_t keymap_size = strlen(keymap_template) + 64;
      char *keymap_str = malloc(keymap_size);
      sprintf(keymap_str, keymap_template, comp_unichr, comp_shift_unichr);
 -    keymap_size = strlen(keymap_str);
++    /* Chromium handles the physical Menu key before its Unicode keysym.
++     * Use the printable A key only while emitting a Copy character, then
++     * restore the regular map before any ordinary key. The Unicode entry
++     * occurs after the normal AC01 entry in every mobintl template. */
++    kb->unicode_keymap = comp_unichr != 0;
++    if (kb->unicode_keymap) {
++        char *entry = strstr(keymap_str, "key <COMP>");
++        if (!entry) {
++            die("Unicode keymap entry missing\n");
++        }
++        memcpy(entry + 5, "AC01", 4);
++    }
 +    keymap_size = strlen(keymap_str) + 1;
      int keymap_fd = os_create_anonymous_file(keymap_size);
      if (keymap_fd < 0) {
          die("could not create keymap fd\n");
-@@ -703,11 +704,23 @@
+@@ -703,11 +719,23 @@
      if (ptr == (void *)-1) {
          die("could not map keymap data\n");
      }

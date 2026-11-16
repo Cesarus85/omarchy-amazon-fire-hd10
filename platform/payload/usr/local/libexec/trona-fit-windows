@@ -22,8 +22,11 @@ def fit():
   width,height=(mw,mh) if fill else (min(w['size'][0],mw),min(w['size'][1],mh))
   x=max(x0,min(w['at'][0],x0+mw-width));y=max(y0,min(w['at'][1],y0+mh-height))
   target=json.dumps('address:'+w['address']); commands=[]
-  if [width,height]!=w['size']:commands.append(f'hl.dispatch(hl.dsp.window.resize({{x={width},y={height},relative=false,window={target}}}))')
-  if [x,y]!=w['at']:commands.append(f'hl.dispatch(hl.dsp.window.move({{x={x},y={y},relative=false,window={target}}}))')
+  resized=[width,height]!=w['size']
+  if resized:commands.append(f'hl.dispatch(hl.dsp.window.resize({{x={width},y={height},relative=false,window={target}}}))')
+  # Hyprland resizes floating windows around their centre. Always re-anchor
+  # after resizing, even when the desired position equals the old position.
+  if resized or [x,y]!=w['at']:commands.append(f'hl.dispatch(hl.dsp.window.move({{x={x},y={y},relative=false,window={target}}}))')
   if commands:hypr('eval','; '.join(commands))
 
 def main():

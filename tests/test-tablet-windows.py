@@ -24,6 +24,10 @@ class Windows(unittest.TestCase):
   self.assertEqual(self.run_fit(tags=['omarchy-mode-floated'],pinned=True),'')
  def test_oversized_dialog_clamped(self):
   self.assertIn('x=936,y=1192',self.run_fit(size=[1800,1600]))
+ def test_resize_reanchors_even_if_original_position_was_correct(self):
+  out=self.run_fit(tags=['omarchy-mode-floated'],at=[12,52])
+  self.assertIn('window.move({x=12,y=52',out)
+  self.assertLess(out.index('window.resize'),out.index('window.move'))
  def test_fullscreen_unmapped_external_and_tiled_untouched(self):
   for kw in [dict(fullscreen=1),dict(fullscreen=2),dict(mapped=False),dict(monitor=1),dict(floating=False)]:
    self.assertEqual(self.run_fit(tags=['omarchy-mode-floated'],**kw),'')

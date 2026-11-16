@@ -1,6 +1,6 @@
 # Tablet app sizes and Unicode input
 
-Platform package **2026.11.16-3** includes these fixes for the pinned Omarchy
+Platform package **2026.11.16-4** includes these fixes for the pinned Omarchy
 4.5.0 / Hyprland 0.57.2 installation.
 
 ## Application windows
@@ -10,6 +10,9 @@ Omarchy's saved floating workspace mode opens regular apps at approximately
 windows tagged `omarchy-mode-floated`, respecting display scale, rotation and
 space reserved by the bar and on-screen keyboard. A maximized app that Omarchy
 restores when another app opens also returns to a full work-area window.
+After resizing, the service explicitly restores the top-left position: Hyprland
+otherwise resizes floating windows about their centre, placing their tops above
+the bar when the on-screen keyboard disappears.
 
 The managed `trona-windows.lua` rule opens ordinary non-floating, non-modal
 applications maximized. It is installed through the existing update repair
@@ -34,6 +37,12 @@ before replacing their keyboard; local modifier latches are retained. The patch
 also includes the required trailing NUL in the keymap size and releases its
 temporary mapping and file descriptor after upload.
 
+Chromium additionally handles the physical Menu key as a context-menu shortcut,
+even when its keysym is Unicode. Unicode input therefore temporarily uses the
+printable A-key position instead. Its regular mapping is restored before the
+next ordinary key. This second fix is needed for browsers as well as the IME
+cache fix; a successful GTK entry test alone did not establish browser support.
+
 Fcitx remains enabled. There is no clipboard injection or application-specific
 emoji replacement. Rebuild the keyboard with `userspace/wvkbd/build.sh` and stage
 that binary with the updated platform sources; changing only the launcher script
@@ -48,7 +57,8 @@ does not fix this issue.
   With the patched keyboard and Fcitx running again, the owner confirmed multiple
   different emojis and ordinary `abc` input.
 - Geometry tests cover all four rotations, reserved bar/keyboard space, dialog
-  clamping and exclusion of fullscreen, pinned and external-monitor windows.
+  clamping, re-anchoring after centre-based resize, and exclusion of fullscreen,
+  pinned and external-monitor windows.
 
 For physical acceptance, open multiple apps, switch between them, rotate the
 tablet and toggle its keyboard. Check that app content remains usable and a file

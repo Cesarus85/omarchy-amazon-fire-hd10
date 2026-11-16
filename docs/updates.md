@@ -13,7 +13,7 @@ The platform package currently requires:
 | Quickshell | 0.3.2.r7.g2b4501a-1 |
 | libcamera / IPA / GStreamer plugin | 0.7.2-4 |
 | Native kernel | 6.18.56-trona-arch14 |
-| Trona platform package | 2026.11.16-1 |
+| Trona platform package | 2026.11.16-2 |
 
 Mesa 26.2.7 and the tested Qt update worked with this set. Future versions are
 not automatically qualified.

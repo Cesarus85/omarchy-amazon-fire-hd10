@@ -1,0 +1,290 @@
+{
+  "date": "2026-11-16",
+  "kernel": "6.18.56-trona-arch14",
+  "platform": "2026.11.16-2",
+  "baseline": {
+    "label": "baseline-always",
+    "memory_before": {
+      "Rss_kB": 468292,
+      "Pss_kB": 408675,
+      "Anonymous_kB": 343636,
+      "AnonHugePages_kB": 258048,
+      "Swap_kB": 0
+    },
+    "memory_after_grid": {
+      "Rss_kB": 469120,
+      "Pss_kB": 409387,
+      "Anonymous_kB": 343956,
+      "AnonHugePages_kB": 241664,
+      "Swap_kB": 0
+    },
+    "grid_ready_ms": [
+      135,
+      90,
+      73,
+      93,
+      79,
+      70,
+      74,
+      77
+    ],
+    "focus_event_ms": [
+      83.18,
+      85.79,
+      93.4,
+      81.78,
+      81.46,
+      75.26,
+      83.33,
+      81.56,
+      85.91,
+      86.63,
+      87.56,
+      84.4,
+      93.71,
+      79.5,
+      84.76,
+      91.27
+    ],
+    "focus_median_ms": 84.58000000000001,
+    "memory_after": {
+      "Rss_kB": 468660,
+      "Pss_kB": 408927,
+      "Anonymous_kB": 343496,
+      "AnonHugePages_kB": 239616,
+      "Swap_kB": 0
+    }
+  },
+  "madvise_only": {
+    "label": "madvise-only",
+    "memory_before": {
+      "Rss_kB": 316480,
+      "Pss_kB": 256675,
+      "Anonymous_kB": 191000,
+      "AnonHugePages_kB": 0,
+      "Swap_kB": 0
+    },
+    "memory_after_grid": {
+      "Rss_kB": 319068,
+      "Pss_kB": 259263,
+      "Anonymous_kB": 193588,
+      "AnonHugePages_kB": 0,
+      "Swap_kB": 0
+    },
+    "grid_ready_ms": [
+      101,
+      97,
+      82,
+      79,
+      80,
+      94,
+      77,
+      81
+    ],
+    "focus_event_ms": [
+      84.71,
+      79.63,
+      86.64,
+      82.16,
+      89.89,
+      87.37,
+      84.88,
+      84.89,
+      93.35,
+      85.18,
+      95.57,
+      87.28,
+      85.57,
+      89.6,
+      82.16,
+      83.76
+    ],
+    "focus_median_ms": 85.375,
+    "memory_after": {
+      "Rss_kB": 317704,
+      "Pss_kB": 257899,
+      "Anonymous_kB": 192224,
+      "AnonHugePages_kB": 0,
+      "Swap_kB": 0
+    }
+  },
+  "optimized": {
+    "label": "optimized",
+    "memory_before": {
+      "Rss_kB": 420960,
+      "Pss_kB": 361215,
+      "Anonymous_kB": 296572,
+      "AnonHugePages_kB": 0,
+      "Swap_kB": 0
+    },
+    "memory_after_grid": {
+      "Rss_kB": 312072,
+      "Pss_kB": 252290,
+      "Anonymous_kB": 187020,
+      "AnonHugePages_kB": 0,
+      "Swap_kB": 0
+    },
+    "grid_ready_ms": [
+      192,
+      94,
+      91,
+      79,
+      88,
+      87,
+      76,
+      76
+    ],
+    "focus_event_ms": [
+      4.24,
+      3.96,
+      4.06,
+      4.63,
+      3.3,
+      3.52,
+      3.57,
+      4.28,
+      4.29,
+      4.02,
+      3.49,
+      4.24,
+      3.62,
+      3.69,
+      4.34,
+      3.61
+    ],
+    "focus_median_ms": 3.9899999999999998,
+    "memory_after": {
+      "Rss_kB": 312164,
+      "Pss_kB": 252382,
+      "Anonymous_kB": 187112,
+      "AnonHugePages_kB": 0,
+      "Swap_kB": 0
+    }
+  },
+  "launch_pipeline": [
+    {
+      "test": "shell",
+      "command": [
+        "bash",
+        "-c",
+        "true"
+      ],
+      "median_ms": 14.875,
+      "values_ms": [
+        16.71,
+        13.11,
+        11.2,
+        15.75,
+        14.56,
+        15.19,
+        13.36,
+        15.92
+      ]
+    },
+    {
+      "test": "shell",
+      "command": [
+        "bash",
+        "-lc",
+        "true"
+      ],
+      "median_ms": 62.18,
+      "values_ms": [
+        59.92,
+        62.28,
+        65.1,
+        61.3,
+        59.7,
+        63.17,
+        62.08,
+        67.88
+      ]
+    },
+    {
+      "test": "shell",
+      "command": [
+        "sh",
+        "-c",
+        "true"
+      ],
+      "median_ms": 14.870000000000001,
+      "values_ms": [
+        16.77,
+        14.13,
+        14.4,
+        16.32,
+        15.34,
+        18.72,
+        14.4,
+        12.88
+      ]
+    },
+    {
+      "test": "launch-to-map",
+      "mode": "direct",
+      "median_ms": 149.07,
+      "values_ms": [
+        171.72,
+        149.07,
+        146.99
+      ]
+    },
+    {
+      "test": "launch-to-map",
+      "mode": "uwsm",
+      "median_ms": 247.03,
+      "values_ms": [
+        242.17,
+        355.62,
+        247.03
+      ]
+    },
+    {
+      "test": "launch-to-map",
+      "mode": "login-uwsm",
+      "median_ms": 290.25,
+      "values_ms": [
+        278.02,
+        312.57,
+        290.25
+      ]
+    },
+    {
+      "test": "launch-to-map",
+      "mode": "uwsm",
+      "median_ms": 254.34,
+      "values_ms": [
+        272.56,
+        226.59,
+        254.34
+      ]
+    },
+    {
+      "test": "launch-to-map",
+      "mode": "direct",
+      "median_ms": 161.6,
+      "values_ms": [
+        171.94,
+        159.88,
+        161.6
+      ]
+    },
+    {
+      "test": "launch-to-map",
+      "mode": "login-uwsm",
+      "median_ms": 315.38,
+      "values_ms": [
+        292.79,
+        375.87,
+        315.38
+      ]
+    }
+  ],
+  "physical_acceptance": "Owner reports smoother app opening/switching, apps menu and on-screen keyboard all working.",
+  "limits": [
+    "Short tests on one 3 GiB Trona; no cold-cache or network-content timing.",
+    "Focus event timing is not touch-to-photon latency.",
+    "No clear improvement in app-grid first-visible readiness.",
+    "App launch pipeline isolates login-shell overhead; absolute app times vary."
+  ]
+}

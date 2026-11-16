@@ -73,7 +73,7 @@ def repair_user():
  atomic(p,json.dumps(data,ensure_ascii=False,indent=2)+'\n')
 
 def repair():
- for command in [['trona-touch-panels'],['trona-lock-bar','--patch-only'],['trona-bluetooth-menu'],['trona-fix-app-grid'],['trona-patch-lock']]:
+ for command in [['trona-touch-panels'],['trona-lock-bar','--patch-only'],['trona-bluetooth-menu'],['trona-fix-app-grid'],['trona-fast-apps'],['trona-patch-lock']]:
   subprocess.run(['/usr/local/sbin/'+command[0],*command[1:]],check=True)
  p=Path('/usr/bin/omarchy-update-boot');atomic(p,patch_boot(p.read_text()))
  p=Path('/usr/bin/omarchy-update-aur-pkgs');s=p.read_text()
@@ -98,6 +98,8 @@ def integration_check():
  if Path('/etc/sudoers.d/trona-bringup').exists():fail('Legacy passwordless administrator access returned')
  if Path('/etc/systemd/system/serial-getty@ttyGS0.service.d/autologin.conf').exists():fail('Legacy serial autologin returned')
  checks={
+ '/usr/share/omarchy/shell/services/AppLibrary.qml':'// Trona app responsiveness v1',
+ '/usr/share/omarchy/shell/plugins/dock/Dock.qml':'// Trona app responsiveness v1',
  '/usr/share/omarchy/shell/Ui/KeyboardPanel.qml':'WlrLayershell.layer: WlrLayer.Top',
  '/usr/share/omarchy/shell/plugins/bar/Bar.qml':'readonly property bool layoutLocked:',
  '/usr/share/omarchy/shell/plugins/dock/AppGrid.qml':'// Swiping scrolls the app list;',

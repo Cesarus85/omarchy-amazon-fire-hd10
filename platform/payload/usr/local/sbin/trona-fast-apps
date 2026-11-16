@@ -1,0 +1,71 @@
+#!/usr/bin/python3
+"""Keep the measured Trona app/dock fast paths across qualified Omarchy updates."""
+from pathlib import Path
+import argparse
+
+MARKER = '// Trona app responsiveness v1'
+
+def patch_library(s):
+    changes = [
+        ('  property var pendingIconIndex: ({})',
+         '  property var pendingIconIndex: ({})\n  property double tronaIconIndexUpdatedAt: 0'),
+        ('    if (!iconIndexScan.running) iconIndexScan.running = true',
+         '    // Entry changes still force a scan; repeated opens reuse the index.\n'
+         '    if (!iconIndexScan.running && (root.tronaIconIndexUpdatedAt === 0 ||\n'
+         '        Date.now() - root.tronaIconIndexUpdatedAt >= 60000)) iconIndexScan.running = true'),
+        ('      Util.execDetached("omarchy-launch-tui " + command.map(function(word) { return Util.shellQuote(word) }).join(" "))',
+         '      Quickshell.execDetached(["omarchy-launch-tui"].concat(command))'),
+        ('    Util.execDetached("uwsm-app -- gtk-launch " + Util.shellQuote(id + ".desktop"))',
+         '    // Inherit the established GUI environment; keep the UWSM app scope.\n'
+         '    Quickshell.execDetached(["uwsm-app", "--", "gtk-launch", id + ".desktop"])'),
+        ('    onExited: root.iconIndex = root.pendingIconIndex',
+         '''    onExited: function(exitCode) {
+      if (exitCode !== 0) return
+      root.tronaIconIndexUpdatedAt = Date.now()
+      var next = root.pendingIconIndex
+      var keys = Object.keys(next)
+      var changed = keys.length !== Object.keys(root.iconIndex).length
+      for (var i = 0; !changed && i < keys.length; i++) {
+        if (root.iconIndex[keys[i]] !== next[keys[i]]) changed = true
+      }
+      // An unchanged scan must not invalidate every visible icon binding.
+      if (changed) root.iconIndex = next
+    }'''),
+    ]
+    return transform(s, changes)
+
+def patch_dock(s):
+    anchor='    var target = "window = \\\"address:" + address + "\\\""'
+    replacement=anchor+'''
+    // The ordinary focus path needs no login shell or hyprctl processes.
+    // Keep the existing minimized-window restore/animation sequence below.
+    if (!window.minimized) {
+      Hyprland.dispatch("hl.dsp.focus({ " + target + " })")
+      Hyprland.dispatch("hl.dsp.window.alter_zorder({ mode = \\"top\\", " + target + " })")
+      return
+    }'''
+    return transform(s, [(anchor,replacement)])
+
+def transform(s, changes):
+    if MARKER in s:
+        return s
+    for old, new in changes:
+        if s.count(old) != 1:
+            raise RuntimeError('Omarchy source changed; review fast-app patch anchor: '+old)
+        s=s.replace(old,new,1)
+    return MARKER+'\n'+s
+
+def main():
+    ap=argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('--shell-dir',type=Path,default=Path('/usr/share/omarchy/shell'))
+    args=ap.parse_args()
+    # Validate every input before committing either file.
+    pending=[]
+    for name,fn in [('services/AppLibrary.qml',patch_library),('plugins/dock/Dock.qml',patch_dock)]:
+        p=args.shell_dir/name;old=p.read_text();new=fn(old)
+        if new!=old:pending.append((p,new))
+    for p,new in pending:
+        tmp=p.with_suffix('.trona.tmp');tmp.write_text(new);tmp.chmod(p.stat().st_mode);tmp.replace(p)
+    print('Trona scoped app launches, native window focus and icon reuse applied.')
+
+if __name__=='__main__':main()

@@ -1,5 +1,8 @@
 # Performance investigation and optional responsive CPU policy
 
+For normal app opening/switching and the later 153 MiB desktop-memory reduction,
+see [app responsiveness](app-responsiveness.md).
+
 For the newer voltage-scaled kernel, see [full CPU DVFS](cpu-dvfs.md).
 The measurements below are the earlier arch12 baseline.
 

@@ -7,6 +7,7 @@
 | USB disappears when changing mode | Allow enumeration to settle, reconnect cable, check Mac accessory authorization; inspect the actual mode before reflashing |
 | Wi-Fi shows no networks | Required firmware, WMT/BTIF and WLAN units, module ABI, rfkill and NetworkManager; no USB proxy needed |
 | Wi-Fi hangs at handshake | Verify the EAPOL optional-metadata fix and matching radio modules |
+| Browser/webapps show ERR_EMPTY_RESPONSE despite working Wi-Fi | Check for the obsolete USB-only Chrome proxy policy; see below |
 | Bluetooth “No adapter” | Native trona-bluetooth transport before bluetooth.service; firmware startup; actual hci device |
 | Keyboard does not reconnect | Correct Easy-Switch channel; wake the keyboard briefly, do not repeatedly erase bonding |
 | Speaker icon active but silent | Trona UCM and analog stages/amplifier path, not just PipeWire mute |
@@ -26,3 +27,34 @@ to reproduce. Redact identifiers from any additional logs yourself.
 On the configured tablet the native standby controller owns Power and screen
 blanking. Adding an independent hypridle/DPMS policy can conflict with it.
 Firmware deep-suspend experiments are not part of the supported path.
+
+## Browser fails while native WLAN works
+
+Early experimental installations may retain
+`/etc/opt/chrome/policies/managed/trona-usb-proxy.json`, forcing Chrome and
+webapps through `127.0.0.1:18080`. That USB rescue proxy can fail even when
+NetworkManager, DNS and direct HTTPS are working. Check `chrome://policy` for
+`ProxyMode` and `ProxyServer`, and compare direct access on the tablet:
+
+```sh
+curl --noproxy '*' --connect-timeout 5 --max-time 15 -I https://example.com
+```
+
+From a checkout of this repository **on the tablet**, remove only the known
+obsolete policy with:
+
+```sh
+sudo python3 tools/trona-remove-legacy-proxy.py
+```
+
+The tool checks the Trona model and root ownership and refuses symlinks,
+malformed JSON or any policy differing from the exact historical settings.
+It does not reset browser profiles or change WLAN, DNS, or the USB maintenance
+connection. Reload the page; if the policy remains cached, fully exit the browser
+through its menu and reopen it. Custom proxy policies require manual review.
+The public installer does not install this legacy policy.
+
+On the reference tablet (2026-11-16), the old proxy aborted HTTPS CONNECT while
+direct IPv4 and IPv6 HTTPS returned HTTP 200. After removing the policy, the owner
+confirmed that both websites and webapps loaded again; the platform integrity
+check passed. No kernel or platform package replacement was needed.

@@ -14,6 +14,7 @@ Die ausführlichen technischen Anleitungen sind auf Englisch:
 4. [Updates](updates.md)
 5. [Sicherheit und private Daten](security.md)
 6. [Technischer Aufbau](architecture.md)
+7. [Fehlerbehebung, einschließlich Browser-/WLAN-Problemen](troubleshooting.md)
 
 **Es gibt jetzt einen experimentellen geführten Installer**, gestartet mit
 `./install.sh`. Er prüft das Gerät, übernimmt die eigene Firmware, baut ein

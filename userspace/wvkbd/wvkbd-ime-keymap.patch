@@ -1,12 +1,13 @@
 --- a/keyboard.h
 +++ b/keyboard.h
-@@ -117,6 +117,9 @@
+@@ -117,6 +117,10 @@
  	struct drwsurf *surf;
  	struct drwsurf *popup_surf;
  	struct zwp_virtual_keyboard_v1 *vkbd;
 +	struct zwp_virtual_keyboard_manager_v1 *vkbd_mgr;
 +	struct wl_seat *seat;
 +	bool unicode_keymap;
++	bool paste_copy;
  
  	uint32_t last_popup_x, last_popup_y, last_popup_w, last_popup_h;
  };
@@ -28,24 +29,30 @@
               landscape_layer_names_list);
 --- a/keyboard.c
 +++ b/keyboard.c
-@@ -1,6 +1,7 @@
+@@ -1,6 +1,9 @@
  #include "proto/virtual-keyboard-unstable-v1-client-protocol.h"
  #include <linux/input-event-codes.h>
  #include <stddef.h>
 +#include <unistd.h>
++#include <sys/wait.h>
++#include <errno.h>
  #include <stdio.h>
  #include <sys/mman.h>
  #include <ctype.h>
-@@ -298,7 +299,7 @@
+@@ -297,8 +300,10 @@
+             zwp_virtual_keyboard_v1_modifiers(kb->vkbd, kb->mods, 0, 0, 0);
          }
  
-         if (kb->last_press->type == Copy) {
+-        if (kb->last_press->type == Copy) {
 -            zwp_virtual_keyboard_v1_key(kb->vkbd, time, 127, // COMP key
++        if (kb->last_press->type == Copy && kb->paste_copy) {
++            kb->paste_copy = false; // helper emitted the complete paste shortcut
++        } else if (kb->last_press->type == Copy) {
 +            zwp_virtual_keyboard_v1_key(kb->vkbd, time, KEY_A, // printable carrier for Unicode
                                          WL_KEYBOARD_KEY_STATE_RELEASED);
          } else {
              if ((kb->last_press->code == KEY_SPACE) && unlatch_shift &&
-@@ -398,6 +399,9 @@
+@@ -398,6 +403,9 @@
  
      switch (k->type) {
      case Code:
@@ -55,7 +62,42 @@
          if (k->code_mod) {
              if (k->reset_mod) {
                  zwp_virtual_keyboard_v1_modifiers(kb->vkbd, k->code_mod, 0, 0,
-@@ -495,7 +499,7 @@
+@@ -486,7 +494,33 @@
+             }
+         }
+         break;
+-    case Copy:
++    case Copy: {
++        /* Chromium rejects some supplementary-plane synthetic key characters.
++         * Keep ordinary native apps on direct keys; a helper handles UTF-8 paste
++         * and restores the previous clipboard in Chromium-family windows. */
++        if (kb->unicode_keymap)
++            create_and_upload_keymap(kb, kb->layout->keymap_name, 0, 0);
++        if (k->code > 0xffff && kb->mods == 0) {
++            char scalar[16];
++            snprintf(scalar, sizeof(scalar), "%x", k->code);
++            pid_t pid = fork();
++            if (pid == 0) {
++                execl("/usr/local/libexec/trona-insert-unicode",
++                      "trona-insert-unicode", scalar, (char *)NULL);
++                _exit(2);
++            }
++            int status = 0;
++            if (pid > 0) {
++                pid_t result;
++                do { result = waitpid(pid, &status, 0); } while (result < 0 && errno == EINTR);
++                if (result == pid && (!WIFEXITED(status) || WEXITSTATUS(status) != 2)) {
++                    kb->last_swipe = kb->last_press = k;
++                    kb->paste_copy = true;
++                    kbd_draw_key(kb, k, Press);
++                    break;
++                }
++            }
++        }
+         // copy code as unicode chr by setting a temporary keymap
+         kb->last_swipe = kb->last_press = k;
+         kbd_draw_key(kb, k, Press);
+@@ -495,11 +529,12 @@
          create_and_upload_keymap(kb, kb->layout->keymap_name, k->code,
                                   k->code_mod);
          zwp_virtual_keyboard_v1_modifiers(kb->vkbd, kb->mods, 0, 0, 0);
@@ -64,7 +106,12 @@
                                      WL_KEYBOARD_KEY_STATE_PRESSED);
          if (kb->print || kb->print_intersect)
              kbd_print_key_stdout(kb, k);
-@@ -693,7 +697,19 @@
+         break;
++    }
+     default:
+         break;
+     }
+@@ -693,7 +728,19 @@
      size_t keymap_size = strlen(keymap_template) + 64;
      char *keymap_str = malloc(keymap_size);
      sprintf(keymap_str, keymap_template, comp_unichr, comp_shift_unichr);
@@ -85,7 +132,7 @@
      int keymap_fd = os_create_anonymous_file(keymap_size);
      if (keymap_fd < 0) {
          die("could not create keymap fd\n");
-@@ -703,11 +719,23 @@
+@@ -703,11 +750,23 @@
      if (ptr == (void *)-1) {
          die("could not map keymap data\n");
      }

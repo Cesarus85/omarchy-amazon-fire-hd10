@@ -1,0 +1,71 @@
+#!/usr/bin/python3
+"""UTF-8 paste for Chromium's incomplete synthetic Unicode key path.
+
+Exit 2 asks wvkbd to use normal key events in other applications. Clipboard
+contents stay in memory only; restore them unless the user copied something new.
+"""
+import fcntl,json,os,pathlib,re,selectors,subprocess,sys,time
+LIMIT=8*1024*1024
+
+def read_clip(*args,timeout=2):
+ p=subprocess.Popen(['wl-paste',*args],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+ out=bytearray();deadline=time.monotonic()+timeout
+ try:
+  with selectors.DefaultSelector() as sel:
+   sel.register(p.stdout,selectors.EVENT_READ)
+   while True:
+    if time.monotonic()>deadline:raise RuntimeError('Clipboard read timed out')
+    if not sel.select(.1):continue
+    chunk=os.read(p.stdout.fileno(),65536)
+    if not chunk:break
+    out.extend(chunk)
+    if len(out)>LIMIT:raise RuntimeError('Clipboard too large to preserve')
+  if p.wait(timeout=1):return None
+  return bytes(out)
+ finally:
+  if p.poll() is None:p.kill()
+  p.wait()
+
+def active():
+ return json.loads(subprocess.check_output(['hyprctl','-i','0','-j','activewindow'],timeout=2))
+
+def copy(data,mime):
+ subprocess.run(['wl-copy','--type',mime,'--sensitive'],input=data,check=True,timeout=2)
+
+def main():
+ point=int(sys.argv[1],16)
+ if not 0<point<=0x10ffff or 0xd800<=point<=0xdfff:raise ValueError('Invalid Unicode scalar')
+ window=active();cls=window.get('class','').lower()
+ if not re.search(r'chrome|chromium|brave|vivaldi|microsoft-edge',cls):return 2
+ target=window.get('address');data=chr(point).encode('utf-8')
+ runtime=pathlib.Path(os.environ['XDG_RUNTIME_DIR'])
+ with (runtime/'trona-unicode.lock').open('w') as lock:
+  fcntl.flock(lock,fcntl.LOCK_EX)
+  if active().get('address')!=target:raise RuntimeError('Focus changed')
+  types=read_clip('--list-types')
+  saved=None;mime=None
+  if types:
+   offered=types.decode('utf-8').splitlines()
+   preferred=['text/uri-list','image/png','image/jpeg','text/plain;charset=utf-8','text/plain','UTF8_STRING']
+   mime=next((m for m in preferred if m in offered),offered[0])
+   saved=read_clip('--no-newline','--type',mime)
+   if saved is None:raise RuntimeError('Cannot preserve clipboard')
+  copy(data,'text/plain;charset=utf-8')
+  try:
+   if active().get('address')!=target:raise RuntimeError('Focus changed')
+   subprocess.run(['wtype','-M','ctrl','-k','v','-m','ctrl'],check=True,timeout=2)
+   time.sleep(.25)
+  finally:
+   # A concurrent copy by the user wins; never overwrite it.
+   current=read_clip('--no-newline','--type','text/plain;charset=utf-8')
+   if current==data:
+    if saved is None:subprocess.run(['wl-copy','--clear'],check=True,timeout=2)
+    else:copy(saved,mime)
+ return 0
+
+if __name__=='__main__':
+ try:sys.exit(main())
+ except Exception as e:
+  subprocess.run(['notify-send','Emoji-Eingabe','Einfügen fehlgeschlagen; Zwischenablage wurde soweit möglich erhalten.'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+  print(type(e).__name__+': emoji insertion failed',file=sys.stderr)
+  sys.exit(1)

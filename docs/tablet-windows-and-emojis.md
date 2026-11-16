@@ -1,6 +1,6 @@
 # Tablet app sizes and Unicode input
 
-Platform package **2026.11.16-4** includes these fixes for the pinned Omarchy
+Platform package **2026.11.16-5** includes these fixes for the pinned Omarchy
 4.5.0 / Hyprland 0.57.2 installation.
 
 ## Application windows
@@ -43,8 +43,17 @@ printable A-key position instead. Its regular mapping is restored before the
 next ordinary key. This second fix is needed for browsers as well as the IME
 cache fix; a successful GTK entry test alone did not establish browser support.
 
-Fcitx remains enabled. There is no clipboard injection or application-specific
-emoji replacement. Rebuild the keyboard with `userspace/wvkbd/build.sh` and stage
+Chromium additionally produced replacement characters for supplementary-plane
+Unicode key events. For these characters, `trona-insert-unicode` now uses UTF-8
+clipboard paste **only in Chromium-family windows**. It remembers the previous
+clipboard in memory, restores it after insertion, and leaves a newer user copy
+alone. It preserves one preferred MIME representation (file URIs, PNG/JPEG or
+text); alternate representations of a multi-format clipboard are not retained.
+Reads are bounded to 8 MiB and fail before changing an unpreservable clipboard.
+Clipboard contents are never logged or written to disk. Focus changes abort
+insertion. Ordinary native apps continue to receive direct Unicode keys.
+
+Fcitx remains enabled. Rebuild the keyboard with `userspace/wvkbd/build.sh` and stage
 that binary with the updated platform sources; changing only the launcher script
 does not fix this issue.
 
@@ -60,7 +69,13 @@ does not fix this issue.
   clamping, re-anchoring after centre-based resize, and exclusion of fullscreen,
   pinned and external-monitor windows.
 
-For physical acceptance, open multiple apps, switch between them, rotate the
+The owner then confirmed correct window positioning after keyboard hiding and
+correct different emojis followed by `abc` in Chrome with the final paste path.
+The on-screen Super shortcut was separately confirmed working. Source tests also
+cover clipboard restoration, focus changes and a concurrent user copy. No full
+reboot was performed during this UI-only fix.
+
+For regression checks, open multiple apps, switch between them, rotate the
 tablet and toggle its keyboard. Check that app content remains usable and a file
 chooser is still a dialog. Test emoji entry in both a native app and a browser,
 then letters and an on-screen Super shortcut. A restart should retain both fixes.

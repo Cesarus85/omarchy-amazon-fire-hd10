@@ -55,7 +55,13 @@ The two icons at the right use the same touch target size as the app icons.
 - **×** asks the active window to close. Applications can prompt to save.
   The app grid has its own Back button so a window underneath stays safe.
 
-The dock reserves its icon row on tiled and floating workspaces. A true
+With the screen keyboard open, the dock releases its row to the focused app.
+Swipe up from the small grip at the bottom centre of the screen to show the
+dock above the keyboard. It overlays the app for six seconds. A second upward
+swipe dismisses it early. Closing the keyboard restores the usual dock.
+This works with both automatic and manual keyboard visibility.
+
+With the keyboard closed, the dock reserves its icon row on tiled and floating workspaces. A true
 fullscreen app can use the entire screen. When the row fills up, swipe the
 app icons sideways. On the screen keyboard, **Super**, **Alt**, then **W**
 also closes the active window. On a hardware keyboard, hold both modifiers

@@ -63,7 +63,7 @@ def patch_dock_window(s):
         closeWindow: true
         allowClose: !window.menuOpen
       }"""
-    return transform(s, [
+    s = transform(s, [
         ('  readonly property bool shown:', '  readonly property bool tabletDock: screen?.name === "DSI-1" && position === "bottom"\n  readonly property bool shown:'),
         ('dock.isFloating(workspaceId) && fullscreenMode', '(tabletDock || dock.isFloating(workspaceId)) && fullscreenMode'),
         ('dock.autohide || fullscreenMode === 1', 'dock.autohide || (!tabletDock && fullscreenMode === 1)'),
@@ -101,6 +101,20 @@ def patch_dock_window(s):
         ('      if (!(appSlot.mouse.pressedButtons & Qt.LeftButton)) return',
          '      if (appViewport.interactive || !(appSlot.mouse.pressedButtons & Qt.LeftButton)) return'),
     ], '// Trona dock touch navigation v1')
+    return transform(s, [
+        ('  readonly property bool shown: !!dock', """  TronaKeyboardEdge {
+    id: keyboardEdge
+    screen: window.screen
+    tracking: window.tabletDock
+    interacting: window.menuOpen || window.dragging || appViewport.dragging || bodyPress.active
+  }
+  readonly property bool shown: (!keyboardEdge.keyboardMapped || keyboardEdge.peeking) && !!dock"""),
+        ('&& fullscreenMode < 2', '&& (fullscreenMode < 2 || keyboardEdge.peeking)'),
+        ('readonly property bool tucked: autohide &&', 'readonly property bool tucked: !keyboardEdge.peeking && autohide &&'),
+        ('exclusiveZone: tabletDock && shown && !autohide', 'exclusiveZone: tabletDock && shown && !keyboardEdge.keyboardMapped && !autohide'),
+        ('WlrLayershell.layer: WlrLayer.Top', 'WlrLayershell.layer: keyboardEdge.peeking ? WlrLayer.Overlay : WlrLayer.Top'),
+        ('    id: body\n', '    id: body\n    PointHandler { id: bodyPress; acceptedButtons: Qt.AllButtons }\n'),
+    ], '// Trona keyboard-aware dock v1')
 
 
 def patch_grid_back(s):

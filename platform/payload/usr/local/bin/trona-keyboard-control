@@ -45,6 +45,8 @@ def main():
         if automatic and old==target:return
         try:
             # Removing the virtual keyboard also releases any latched modifiers.
+            if target:
+                command('/usr/bin/systemctl','--user','reset-failed','trona-keyboard.service')
             command('/usr/bin/systemctl','--user','restart' if target else 'stop','trona-keyboard.service')
             deadline=time.monotonic()+12
             while visible()!=target:

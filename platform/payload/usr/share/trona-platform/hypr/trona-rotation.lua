@@ -28,7 +28,9 @@ local function sync_touch()
     os.rename(path .. ".lua.tmp", path)
   end
   hl.config({ input = { touchdevice = { output = "DSI-1", transform = transform } } })
-  hl.exec_cmd("systemctl --user restart trona-keyboard.service")
+  -- Each requested rotation is an intentional start. Keep the service's
+  -- built-in rate limit for repeated failures within a single start.
+  hl.exec_cmd("systemctl --user reset-failed trona-keyboard.service; systemctl --user restart trona-keyboard.service")
 end
 sync_touch()
 hl.on("monitor.layout_changed", sync_touch)

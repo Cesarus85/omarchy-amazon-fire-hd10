@@ -9,5 +9,6 @@ git clone --branch v0.16 --depth 1 https://git.sr.ht/~proycon/wvkbd "$out"
 cd "$out"
 patch --batch -p1 < "$here/wvkbd-trona.patch"
 patch --batch -p1 < "$here/wvkbd-ime-keymap.patch"
+patch --batch -p1 < "$here/wvkbd-symbols.patch"
 make -j"${JOBS:-4}" LAYOUT=mobintl
 printf 'Built %s/wvkbd-mobintl; not installed.\n' "$out"

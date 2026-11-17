@@ -79,3 +79,21 @@ For regression checks, open multiple apps, switch between them, rotate the
 tablet and toggle its keyboard. Check that app content remains usable and a file
 chooser is still a dialog. Test emoji entry in both a native app and a browser,
 then letters and an on-screen Super shortcut. A restart should retain both fixes.
+
+## Direct special characters
+
+Platform package **2026.11.17-3** adds a third keyboard page in both orientations:
+**123 → !@# → ABC**. The original number/navigation page remains available.
+The new four-row page exposes `! @ # $ % ^ & * ( )`, brackets, quotes, slashes,
+comparison signs, `€` and `£` without a separate Shift or AltGr step. Its bottom
+row retains ABC, emoji, Super, Space, Backspace and Enter. Keyboard height and
+reserved screen space are unchanged.
+
+`userspace/wvkbd/wvkbd-symbols.patch` applies after the two existing patches.
+It uses the existing Latin keymap and explicit per-key modifiers; ordinary
+special characters do not use the emoji clipboard path. A native XKB check
+verified that all 30 symbol keys produce their displayed labels. The ARM64
+keyboard builds successfully. The owner confirmed `!@#?€` followed by `abc`
+in a browser text field in both portrait and landscape after installation.
+Package verification reports 205 files with zero altered files; the existing
+update guards passed. No reboot was needed.

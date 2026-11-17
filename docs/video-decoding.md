@@ -1,19 +1,110 @@
 # Video decoding investigation — updated 2026-11-17
 
-**Hardware video decoding remains disabled.** The test brought up the MT8183
-SCP and decoder device, but both tested userspace paths failed to produce valid
-H.264 video. The reference tablet was returned to its previously qualified
-arch14 boot image; no browser acceleration flags or sandbox exceptions were
-installed. General performance and tablet usability work is tracked separately
-in the [roadmap](roadmap.md).
+**H.264 now works in an isolated experiment; normal builds still leave hardware
+decoding disabled.** A decoder-only Linux MMIO proxy resolves the SCP access
+failure without changing secure-firmware permissions. Hardware output matched
+software decoding byte for byte at 480p and 1080p. An isolated Chrome profile
+used `VaapiVideoDecoder` and reduced measured Chrome-plus-proxy CPU time by about
+35% in one short comparison. This is not yet a qualified everyday feature.
 
-The [measurement summary](evidence/video-decoding-2026-11-16.json) records both
-the failed decoder qualification and the final restoration checks: update
-integrity passed, 183 platform files checked with zero altered files, and no
-failed system services. Temporary modules, firmware and media were removed
-from the tablet after reboot. No persistent experimental service remains.
+After the experiment, the reference tablet was returned to its previously
+qualified arch14 boot image. No browser flags, sandbox exceptions, experimental
+firmware or services were installed permanently. General performance and tablet
+usability work remains tracked in the [roadmap](roadmap.md).
 
-## Baseline
+The [proxy evidence](evidence/video-proxy-2026-11-17.json) records successful
+decoding and restoration checks. The earlier [initial measurements](evidence/video-decoding-2026-11-16.json)
+and [access-denial evidence](evidence/video-decoding-2026-11-17.json) remain as
+historical stages, not the latest decoding result.
+
+## Working decoder proxy — 2026-11-17
+
+The vendor ATF boot log reports all six MM-domain-3 permission words as
+`0xffffffff`, consistent with the denied decoder transaction below. A minimal
+SCP read probe separately confirmed that its infrastructure accesses appear as
+domain 4, whereas its MM decoder accesses appear as domain 3. These domain IDs
+must not be treated as one universal SCP ID. The vendor diagnostic SMC
+`0x82000101` with argument 1 returned `0xffffffff` (unsupported); no permission
+setter or global DEVAPC reset was invoked.
+
+The [source-only prototype](../experiments/video-decode/scp-proxy/README.md)
+instead modifies a temporary copy of the exact pinned SCP image:
+
+1. A hook at H.264 initialization enables an unused Cortex-M4 MPU region to trap
+   decoder MMIO. A second unused region provides a private mailbox in SCP TCM.
+2. Its fault handler decodes the trapped word load/store and submits a request.
+3. A Linux worker performs only aligned 32-bit accesses in AP address ranges
+   `0x16000000–0x160000ff` and `0x16020000–0x16024fff`, then returns the result.
+4. Other addresses/instructions fail to the original SCP fault handler. There
+   is no access to DEVAPC permission registers through this mailbox.
+
+The official firmware file, secure monitor, bootloader and global access policy
+remain unchanged. The patched copy was loaded from a temporary firmware search
+directory. Linux already has access to the decoder; the proxy delegates that
+narrow register operation rather than granting the SCP a new bus domain.
+
+### Confirmed output and performance
+
+| Test | Result |
+| --- | --- |
+| 640×480 H.264 Baseline, 60 frames | Every I420 frame byte-identical to software |
+| 1920×1080 H.264 High with B frames, 120 frames | Every I420 frame byte-identical to software |
+| VA-API bridge, same 120-frame 1080p stream | NV12 hash identical to software |
+| Three cycles alternating the two streams | Six successful pipeline openings; no decoder errors |
+| Adaptive proxy idle, three seconds | Less than one 10-ms CPU accounting tick |
+| Native tiled-output decoder throughput | 120 frames in 0.966 s, about 124 fps |
+| VA-API download throughput, two runs | About 62–64 fps, including format conversion |
+
+The original busy-poll proxy consumed almost one core even while idle; the
+published version sleeps after inactivity. CPU conversion of GStreamer's
+uncached MM21 output to I420 was still very expensive (about 15 seconds for
+120 frames), so that pipeline is a correctness check, not the browser path.
+The separately built VA-API bridge uses its default cacheable-buffer conversion.
+
+One controlled Chrome comparison used the same local 4-second looping 1080p30
+H.264 clip, a temporary profile per run, a windowed player, and a 20-second
+sampling interval after startup. No builds overlapped these samples:
+
+| Measurement | Software | Hardware + proxy |
+| --- | --- | --- |
+| Reported decoder | `FFmpegVideoDecoder` | `VaapiVideoDecoder` |
+| Platform video decoder | false | true |
+| Chrome process CPU seconds | 25.18 | 10.62 |
+| Linux proxy CPU seconds | 0.06 | 5.76 |
+| Combined CPU, percent of one core | 126.2% | 81.9% |
+| Video frames during interval | 593 | 593 |
+| Additional dropped frames during interval | 0 | 0 |
+
+Combined measured CPU time fell by **35.1%**. The proxy is included; the rest of
+the system is not. This is one short synthetic A/B sample, not a battery/power
+measurement, a fullscreen YouTube benchmark, or proof for all H.264 streams.
+Startup drops were outside the interval. Chrome still advertised an empty
+`videoDecoding` capability list despite actually selecting the hardware decoder.
+There was no new human visual acceptance test.
+
+### Before permanent enablement
+
+The prototype has no qualified suspend/resume lifecycle and retains an SCP main
+clock reference while loaded. Stopping its worker while the patched firmware
+still needs it is unsafe for playback. Early development iterations triggered
+SCP watchdogs; only the corrected cold-start version passed the tests above.
+The handler is pinned to one firmware image and a limited set of Thumb word
+access instructions, not a general-purpose emulator or a new security boundary.
+
+Next qualify repeated cold starts, long clips, seeking, concurrent clients,
+malformed streams, clean teardown and standby/wake, then integrate lifecycle,
+package/update protection and browser fallback. Review firmware/bridge licensing
+before distributing binaries. VP9, HEVC, AV1, protected playback and all other
+codecs remain unqualified. The normal kernel configuration, device tree, platform
+package and installer were deliberately left unchanged.
+
+Restoration verified the original boot hash, SCP disabled, no experimental
+modules, an empty firmware override path, update integrity passing, 183 platform
+files with zero altered files, and no failed system units. Desktop, networking,
+Bluetooth and standby services were active; both CPU clusters retained 1989 MHz
+maximums. Temporary tablet files were deleted. Physical wake was not retested.
+
+## Earlier baseline
 
 Arch14, Chrome 157.0.8103.78, Mesa 26.2.7, FFmpeg 9.0.2, GStreamer 1.28.9.
 An isolated temporary Chrome profile used Panfrost for compositing but advertised
@@ -74,9 +165,8 @@ log string is `init BarelShift fail`. Correctly indexed VDEC_LD register reads
 in the kernel after the failed request were zero at offsets `0x8c`, `0xb0`,
 `0xc8`, `0xe8`, `0xf4`, `0x108` and `0x110`; decoder IRQ count remained zero.
 
-The follow-up below identifies an access-control failure during this operation.
-It does not establish that resolving that failure would be sufficient for correct
-decoding; output-frame and stability qualification remain necessary.
+The follow-up below identified the access-control failure. The proxy experiment
+above subsequently established correct frame output with delegated MMIO.
 
 ## SCP access investigation — 2026-11-17
 
@@ -120,13 +210,12 @@ not find a verified interface for changing only the required decoder permissions
 The vendor-wrapped ATF payload read from `tee1` did not provide directly inspectable
 AArch64 code; no secure firmware was modified or flashed.
 
-The next prerequisite is a verified, narrowly scoped way to grant the SCP decoder
-register access through the Fire boot chain. Do not blindly invoke DEVAPC init,
+At this stage, a narrowly scoped permission grant through the Fire boot chain
+remained unresolved. The later proxy above avoids needing one. Do not invoke DEVAPC init,
 change the SCP to domain 0, or disable protection globally. If a firmware change
 is required, establish its exact handler, policy, boot compatibility and recovery
-route first. Then repeat hardware frame comparison, repeated playback, seeking and
-post-standby tests before browser integration. The current experiment remains
-unsuitable for the normal installer.
+route first. The proxy still needs seeking, long-running playback and
+post-standby qualification before normal installer integration.
 
 The [follow-up evidence](evidence/video-decoding-2026-11-17.json) records the two
 matching denial events and restoration checks. Source references:
@@ -140,12 +229,12 @@ matching denial events and restoration checks. Source references:
 
 The test built [shelterx's MT8183 bridge](https://github.com/shelterx/vaapi-v4l2-bridge-mt8183)
 at commit `7e5d1dd49e37e9b99521d6ea63da59c6e1a2bfec` in a temporary directory.
-It was only selected for the FFmpeg test using process-local `LIBVA_DRIVER_NAME`
-and `LIBVA_DRIVERS_PATH`; it was not installed globally or enabled in the user's
-browser. No sandbox was disabled. Browser integration, licensing review for any
-redistribution, VP9/AV1 coverage, seeking, repeated playback and post-standby
-qualification still need work after the underlying decoder produces correct
-frames. Do not infer hardware support from Chrome's generic `video_decode:
+In the successful proxy follow-up it was selected for FFmpeg and an isolated
+Chrome profile using process-local `LIBVA_DRIVER_NAME` and `LIBVA_DRIVERS_PATH`;
+it was not installed globally or enabled in the user's browser. No sandbox was
+disabled. Permanent browser integration, licensing review for redistribution,
+other codecs, seeking, long-running playback and post-standby qualification still
+need work. Do not infer hardware support from Chrome's generic `video_decode:
 enabled` label alone.
 
 Relevant upstream references:

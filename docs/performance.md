@@ -4,7 +4,7 @@ For normal app opening/switching and the later 153 MiB desktop-memory reduction,
 see [app responsiveness](app-responsiveness.md).
 
 For the newer voltage-scaled kernel, see [full CPU DVFS](cpu-dvfs.md).
-For the video decoder bring-up and unresolved hardware blocker, see
+For experimental hardware H.264 playback, CPU measurements and remaining qualification, see
 [video decoding](video-decoding.md). Later optimization work is in the [roadmap](roadmap.md).
 The measurements below are the earlier arch12 baseline.
 

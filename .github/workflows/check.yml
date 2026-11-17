@@ -22,3 +22,14 @@ jobs:
       - run: python3 tests/test-installer.py
       - run: python3 tests/test-rotation-policy.py
       - run: python3 drivers/connectivity/tests/rx-eapol-optional-status.py
+  scp-proxy-emulation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get update -qq && sudo apt-get install -y clang binutils-arm-none-eabi
+      - run: python3 -m pip install pyelftools==0.33 unicorn==2.1.4
+      - run: bash experiments/video-decode/scp-proxy/build-helper.sh
+      - run: python3 experiments/video-decode/scp-proxy/test-proxy.py build/scp-proxy

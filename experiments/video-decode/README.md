@@ -1,8 +1,10 @@
 # MT8183 decoder experiment — not enabled in the port
 
-This experiment **does not produce valid decoded video on the reference Trona**.
-It is retained for driver development. Do not add it to the normal installer or
-advertise browser acceleration. See [results and next investigation](../../docs/video-decoding.md).
+The original unmodified-SCP experiment failed. The later
+[decoder-only SCP proxy](scp-proxy/README.md) **produces byte-exact H.264 output
+and works in an isolated Chrome profile**. It is still a developer experiment:
+standby, long-running playback and permanent integration are unqualified.
+Normal installer/package builds remain unchanged. See [results](../../docs/video-decoding.md).
 
 The 2026-11-17 follow-up found a reproducible DEVAPC-denied write to
 `0x16000000` during H.264 initialization. [read-access-state.py](read-access-state.py)
@@ -51,7 +53,7 @@ media core already loaded:
 2. `v4l2-h264`, `v4l2-vp9`, `v4l2-mem2mem`
 3. `mtk-vcodec-common`, `mtk-vcodec-dbgfs`, `mtk-vcodec-dec`
 
-No flashing command is provided for this failed candidate. A developer test must
+No flashing command is provided for this developer candidate. A test must
 retain the per-device boot/recovery/hash checks, a tested return image and a
 matching update guard. Do not work around the guard or use a different tablet's
 boot image. Inspect the live reserved-memory node **and** `/proc/iomem` before
@@ -75,7 +77,7 @@ gst-launch-1.0 -v filesrc location=test-1080p.mp4 ! qtdemux ! \
   h264parse ! v4l2slh264dec ! fakesink sync=false
 ```
 
-**EOS and a zero exit code are not evidence of correct decoding.** In this test
+**EOS and a zero exit code are not evidence of correct decoding.** In the original test
 GStreamer reached EOS while the kernel reported errors for every frame. Compare
 actual output against software decoding and inspect kernel errors before doing
 browser or battery comparisons. Avoid retaining large raw-video dumps.

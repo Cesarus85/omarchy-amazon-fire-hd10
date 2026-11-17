@@ -1,0 +1,230 @@
+{
+  "date": "2026-11-17",
+  "board": "amazon,trona / MT8183",
+  "kernel": "6.18.56-trona-arch14",
+  "status": "experimental_h264_bit_exact_and_isolated_browser_playback; not enabled permanently",
+  "secure_policy": {
+    "atf_version": "v1.3(debug):b82cba1",
+    "mm_domain_3_apc_words": [
+      "0xffffffff",
+      "0xffffffff",
+      "0xffffffff",
+      "0xffffffff",
+      "0xffffffff",
+      "0xffffffff"
+    ],
+    "scp_infrastructure_probe": {
+      "domain": 4,
+      "master": "0x4f",
+      "address": "0x1001c30c",
+      "result": "read denied"
+    },
+    "scp_mm_decoder_event_domain": 3,
+    "diagnostic_smc": {
+      "function": "0x82000101",
+      "arg1": 1,
+      "result": "0xffffffff unsupported"
+    },
+    "permission_registers_changed": false,
+    "secure_firmware_changed": false,
+    "global_protection_disabled": false
+  },
+  "proxy": {
+    "mechanism": "Cortex-M4 MPU trap, word instruction emulation, fixed Linux MMIO allowlist",
+    "ap_allowed_inclusive_ranges": [
+      [
+        "0x16000000",
+        "0x160000ff"
+      ],
+      [
+        "0x16020000",
+        "0x16024fff"
+      ]
+    ],
+    "original_scp_sha256": "401e9c027b0e105efa9eb9b31683924a8d5f5ab3b1654f0915b174effe2df33d",
+    "tested_patched_scp_sha256": "058d707c53ba0bc2c66ffd67b36f1a0fcbad3ab29e7489ad681af640f9d89616",
+    "hook_tcm": "0x2df70",
+    "helper_tcm": "0x50000",
+    "mailbox_tcm": "0x57000",
+    "mpu_slots": [
+      6,
+      7
+    ],
+    "kernel_worker": "adaptive poll, sleep 500-1000us when idle",
+    "early_iterations": "SCP watchdog failures; corrected helper qualified only after clean boot"
+  },
+  "frame_comparisons": [
+    {
+      "resolution": "640x480",
+      "hardware_frames": 60,
+      "software_frames": 60,
+      "exact_bytes_match": true,
+      "matching_frames": 60,
+      "hardware_sha256": "102dec9fd7bf581472fa0a3a7b26e23e298899623be4ca55c5d4f42be08d6886",
+      "software_sha256": "102dec9fd7bf581472fa0a3a7b26e23e298899623be4ca55c5d4f42be08d6886"
+    },
+    {
+      "resolution": "1920x1080",
+      "frames": 120,
+      "matching_frames": 120,
+      "first_differing_frames": [],
+      "hardware_sha256": "19ead2df4589a041e462bbe6b065d368ff11672dcf97d3541d18067b5f70fe79",
+      "software_sha256": "19ead2df4589a041e462bbe6b065d368ff11672dcf97d3541d18067b5f70fe79",
+      "exit_codes": [
+        0,
+        0
+      ],
+      "comparison_wall_seconds": 15.772050923999984,
+      "comparison_includes_both_decoders": true
+    }
+  ],
+  "vaapi": {
+    "bridge_commit": "7e5d1dd49e37e9b99521d6ea63da59c6e1a2bfec",
+    "unmodified_source_build": true,
+    "global_install": false,
+    "sandbox_disabled": false,
+    "nv12_full_stream_sha256": "5f9e07b094610dd6ce26b918df9aa36c7247e338f78cfecc8906f1733b8aa247",
+    "software_nv12_sha256_matches": true,
+    "frames": 120,
+    "runs": [
+      {
+        "backend": "software",
+        "wall_seconds": 0.9390919239999675,
+        "client_cpu_seconds": 3.096354,
+        "proxy_cpu_seconds": 0.0,
+        "exit_code": 0
+      },
+      {
+        "backend": "vaapi",
+        "wall_seconds": 1.8745839230000456,
+        "client_cpu_seconds": 1.0953940000000006,
+        "proxy_cpu_seconds": 1.4099999999999993,
+        "exit_code": 0
+      },
+      {
+        "backend": "software",
+        "wall_seconds": 0.997591768999996,
+        "client_cpu_seconds": 3.245042999999999,
+        "proxy_cpu_seconds": 0.0,
+        "exit_code": 0
+      },
+      {
+        "backend": "vaapi",
+        "wall_seconds": 1.933909230999916,
+        "client_cpu_seconds": 1.2758299999999991,
+        "proxy_cpu_seconds": 1.4300000000000015,
+        "exit_code": 0
+      }
+    ]
+  },
+  "repeated_playback": {
+    "pipeline_openings": 6,
+    "streams": "alternating 480p and 1080p, three cycles",
+    "all_successful": true,
+    "scp_stayed_running": true,
+    "decoder_errors": 0
+  },
+  "browser_comparison": {
+    "sample": "local synthetic 4-second looping 1920x1080/30 H.264 High with B frames, windowed",
+    "profiles": "separate temporary Chrome profiles",
+    "scope": "Chrome processes plus proxy CPU, not total-system or power measurement",
+    "no_overlapping_builds": true,
+    "runs": [
+      {
+        "backend": "software",
+        "elapsed_seconds": 20.002876232000062,
+        "decoder": "FFmpegVideoDecoder",
+        "platform_decoder": false,
+        "chrome_cpu_seconds": 25.18,
+        "proxy_cpu_seconds": 0.06,
+        "combined_cpu_seconds": 25.24,
+        "combined_percent_one_core": 126.18185358574448,
+        "frames_in_interval": 593,
+        "dropped_in_interval": 0,
+        "capability_list": []
+      },
+      {
+        "backend": "hardware",
+        "elapsed_seconds": 20.00244438599998,
+        "decoder": "VaapiVideoDecoder",
+        "platform_decoder": true,
+        "chrome_cpu_seconds": 10.62,
+        "proxy_cpu_seconds": 5.76,
+        "combined_cpu_seconds": 16.38,
+        "combined_percent_one_core": 81.88999146256654,
+        "frames_in_interval": 593,
+        "dropped_in_interval": 0,
+        "capability_list": []
+      }
+    ],
+    "combined_cpu_time_reduction_percent": 35.10301109350238
+  },
+  "qualification_outstanding": [
+    "long clips and malformed streams",
+    "seeking and concurrent clients",
+    "suspend/resume and worker teardown",
+    "repeated cold boots",
+    "package/update integration and browser fallback",
+    "other codecs and protected playback",
+    "human visual acceptance",
+    "firmware and bridge binary redistribution licensing"
+  ],
+  "restoration": {
+    "original_boot_restored_and_rebooted": true,
+    "original_padded_boot_sha256": "846dfe2149295f714851625530d0908cc4caa51614e42fb8bce6f188208f948d",
+    "scp_disabled": true,
+    "experimental_modules_loaded": false,
+    "firmware_override_empty": true,
+    "temporary_tablet_files_removed": true,
+    "update_check": "pass",
+    "platform_files_checked": 183,
+    "platform_files_altered": 0,
+    "failed_system_units": 0,
+    "hyprland_running": true,
+    "network_manager_active": true,
+    "bluetooth_active": true,
+    "standby_service_active": true,
+    "both_cluster_max_khz": 1989000,
+    "physical_wake_retested": false,
+    "normal_kernel_package_installer_changes": false
+  },
+  "adaptive_worker_benchmarks": [
+    {
+      "idle_seconds": 3.000150845999997,
+      "proxy_cpu_seconds": 0.0
+    },
+    {
+      "hardware_native": {
+        "wall_seconds": 0.9655582309999886,
+        "proxy_cpu_seconds": 0.82,
+        "exit_code": 0,
+        "stderr": ""
+      }
+    },
+    {
+      "hardware_I420": {
+        "wall_seconds": 15.017604462000008,
+        "proxy_cpu_seconds": 1.1999999999999997,
+        "exit_code": 0,
+        "stderr": ""
+      }
+    },
+    {
+      "software": {
+        "wall_seconds": 0.873477615000013,
+        "proxy_cpu_seconds": 0.010000000000000231,
+        "exit_code": 0,
+        "stderr": ""
+      }
+    }
+  ],
+  "source_validation": {
+    "public_helper_rebuild_matches_tested_binary": true,
+    "public_patched_image_matches_tested_hash": true,
+    "host_module_rebuilt_against_exact_arch14": true,
+    "arm_emulation_cases_passed": 18,
+    "wrong_firmware_rejected_without_output": true,
+    "inplace_firmware_patch_rejected": true,
+    "source_checks_files": 572
+  }
+}

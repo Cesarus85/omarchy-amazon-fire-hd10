@@ -75,7 +75,20 @@ def repair_user():
   if item['id'] not in all_ids:left.append(item)
  atomic(p,json.dumps(data,ensure_ascii=False,indent=2)+'\n')
 
+def patch_browser_handoff(text):
+ # Keep the existing owner, profile, argument and ACK checks in Omarchy's helper.
+ original = "grep -vE '^(--(ozone-platform|ozone-platform-hint|password-store|enable-features|load-extension)=.*|--no-default-browser-check)?$'"
+ patched = original.replace("grep -vE '", 'grep -vE "').replace(")?$'", '${trona_flags})?$"')
+ marker = 'trona_flags=""'
+ if marker in text and patched in text: return text
+ anchor = 'if [[ -n ${CHROME_USER_DATA_DIR:-}${CHROME_CONFIG_HOME:-} ]]'
+ if text.count(original) != 1 or text.count(anchor) != 1:
+  fail('Omarchy browser handoff changed; review its flag checks')
+ flags = marker + '\n[[ $profile == google-chrome ]] && trona_flags="|--no-first-run|--force-renderer-accessibility=form-controls"\n'
+ return text.replace(anchor, flags+anchor, 1).replace(original, patched, 1)
+
 def repair():
+ p=Path('/usr/bin/omarchy-cmd-browser-handoff');atomic(p,patch_browser_handoff(p.read_text()))
  for command in [['trona-touch-panels'],['trona-lock-bar','--patch-only'],['trona-bluetooth-menu'],['trona-fix-app-grid'],['trona-fast-apps'],['trona-patch-lock']]:
   subprocess.run(['/usr/local/sbin/'+command[0],*command[1:]],check=True)
  if Path('/usr/local/sbin/trona-video-browser').is_file():
@@ -106,6 +119,7 @@ def integration_check():
  if Path('/etc/sudoers.d/trona-bringup').exists():fail('Legacy passwordless administrator access returned')
  if Path('/etc/systemd/system/serial-getty@ttyGS0.service.d/autologin.conf').exists():fail('Legacy serial autologin returned')
  checks={
+ '/usr/bin/omarchy-cmd-browser-handoff':'|--no-first-run|--force-renderer-accessibility=form-controls',
  '/usr/share/omarchy/shell/services/AppLibrary.qml':'// Trona app responsiveness v1',
  '/usr/share/omarchy/shell/plugins/dock/DockWindow.qml':'// Trona dock hold and dismiss v1',
  '/usr/share/omarchy/shell/plugins/dock/Dock.qml':'// Trona app responsiveness v1',

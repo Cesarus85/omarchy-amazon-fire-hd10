@@ -83,3 +83,32 @@ The guarded upgrade and production-shell restart passed; `pacman -Qkk` reports
 181 package entries and zero altered files. The tmpfiles rule was applied and
 read back as `madvise`. A separate full tablet reboot was not performed in this
 app-responsiveness pass.
+
+## Chrome and web-app launches on November 17
+
+Platform `2026.11.17-11` enables Omarchy's existing Chrome process handoff
+with the tablet's two startup flags, `--no-first-run` and
+`--force-renderer-accessibility=form-controls`. The latter supports the
+automatic on-screen keyboard. The guard allows these exact settings for
+Google Chrome. The existing profile selection, socket ownership, and browser
+acknowledgement checks still apply. A stopped browser takes the normal launch
+path. The platform update hook reapplies the change.
+
+On the reference tablet, a running Chrome opened a new window on a local HTML
+page in a median **510 ms** through the installed helper versus **967 ms**
+through the previous helper. Four runs per route alternated within an isolated
+profile. Timing ends when Hyprland reports the expected page title. The saved
+test profile also opened in about **2 s** with its browser process stopped.
+The normal Omarchy web-app command opened the local page successfully.
+These measurements exclude network content and do not time display scanout.
+
+A separate 16-switch test measured **1.5 ms** median from the compositor
+focus request to the focus event. For ordinary desktop entries, a trial
+of GIO inside the existing UWSM launch scope reduced median time to the first
+mapped terminal window from 458 to 334 ms. The general launcher remains on
+gtk-launch pending checks of desktop-entry selection and foreground activation.
+
+An optional Omarchy Bluetooth agent retried every two seconds when its binary
+was missing. A systemd unit condition skips this agent until the executable is
+available. On the tablet the restart counter stopped at 723, with bluetoothd
+and the Blueman applet still active.

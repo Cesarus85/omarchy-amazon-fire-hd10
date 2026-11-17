@@ -35,10 +35,15 @@ def check(transform,keyboard_visible):
  ls=layers()
  bar=next((x for x in ls if x['namespace']=='omarchy-bar'),None)
  if not bar or bar['w']!=w or bar['h']!=h:return False
+ nav=next((x for x in ls if x['namespace']=='trona-touch-nav'),None)
+ keyboard_bottom=h
+ if nav:
+  if (nav['x'],nav['w'],nav['y']+nav['h'])!=(0,w,h):return False
+  keyboard_bottom=nav['y']
  if keyboard_visible:
   kbd=next((x for x in ls if x['namespace']=='wlroots'),None)
   kh=200 if transform%2 else 280
-  if not kbd or (kbd['x'],kbd['y'],kbd['w'],kbd['h'])!=(0,h-kh,w,kh):return False
+  if not kbd or (kbd['x'],kbd['y'],kbd['w'],kbd['h'])!=(0,keyboard_bottom-kh,w,kh):return False
  elif any(x['namespace']=='wlroots' for x in ls):return False
  return True
 

@@ -7,3 +7,6 @@ hl.window_rule({
   match = { float = false, modal = false, workspace = "r[1-2147483647]" },
   maximize = true,
 })
+
+-- Accessible as a latched Super, Alt, W sequence on the tablet keyboard.
+o.bind("SUPER + ALT + W", "Close window (tablet)", hl.dsp.window.close())

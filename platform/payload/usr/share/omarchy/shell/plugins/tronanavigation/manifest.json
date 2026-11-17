@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "trona.touch-nav",
+  "name": "Tablet navigation",
+  "version": "1.0.0",
+  "description": "Touch controls for the Trona tablet.",
+  "kinds": ["service"],
+  "entryPoints": {"service": "TabletNavigation.qml"}
+}

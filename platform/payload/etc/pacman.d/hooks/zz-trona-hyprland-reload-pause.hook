@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Upgrade
+Type = Package
+Target = trona-platform
+
+[Action]
+Description = Pause Hyprland reload while replacing the Trona session configuration
+When = PreTransaction
+Depends = omarchy
+Exec = /usr/bin/omarchy-hyprland-reload-guard pause
+AbortOnFail

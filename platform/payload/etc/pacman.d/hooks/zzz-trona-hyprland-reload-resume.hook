@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Upgrade
+Type = Package
+Target = trona-platform
+
+[Action]
+Description = Resume Hyprland reload after Trona integration repair
+When = PostTransaction
+Depends = omarchy
+Exec = /usr/bin/omarchy-hyprland-reload-guard resume

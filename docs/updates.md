@@ -13,7 +13,7 @@ The platform package currently requires:
 | Quickshell | 0.3.2.r7.g2b4501a-1 |
 | libcamera / IPA / GStreamer plugin | 0.7.2-4 |
 | Native kernel | 6.18.56-trona-arch14 |
-| Trona platform package | 2026.11.16-5 |
+| Trona platform package | 2026.11.17-10 |
 
 Mesa 26.2.7 and the tested Qt update worked with this set. Future versions are
 not automatically qualified.
@@ -25,6 +25,13 @@ UUID/size, boot/recovery read-only state and hashes, module metadata, platform
 file ownership/hashes and expected Omarchy integration. It blocks generic
 kernel/bootloader packages and unrelated /boot or kernel-module payloads.
 Removing trona-platform through an ordinary transaction is blocked.
+
+When pacman replaces `trona-platform`, the tablet uses Omarchy's Hyprland reload
+guard while the session's Lua files are being replaced. This prevents the red
+configuration banner for a temporarily missing `session.lua`. Once the files
+are back, the guard reloads the configuration and restores the session's prior
+settings. To inspect a warning that persists after an update, run
+`hyprctl configerrors` from the desktop.
 
 After transactions it reapplies checked tablet patches, restores integration
 and verifies it again. A boot service repeats the checks and protects boot and

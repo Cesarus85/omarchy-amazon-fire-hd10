@@ -1,3 +1,11 @@
+pre_upgrade() {
+  # On the first upgrade from an older build, pacman has already scanned the
+  # pre-transaction hooks before our new hook is installed.
+  if [ ! -e /etc/pacman.d/hooks/zz-trona-hyprland-reload-pause.hook ]; then
+    /usr/bin/omarchy-hyprland-reload-guard pause
+  fi
+}
+
 post_install() {
   visudo -cf /etc/sudoers.d/00-trona-admin || return 1
   rm -f /etc/sudoers.d/trona-bringup

@@ -46,14 +46,92 @@ def patch_dock(s):
     }'''
     return transform(s, [(anchor,replacement)])
 
-def transform(s, changes):
-    if MARKER in s:
+def patch_dock_window(s):
+    button = """      TronaNavButton {
+        visible: window.tabletDock
+        width: window.slotSize
+        height: window.slotSize
+        onBack: {
+          if (window.menuOpen) window.closeMenu()
+          else Quickshell.execDetached(["/usr/bin/wtype", "-k", "Escape"])
+        }
+      }"""
+    close = """      TronaNavButton {
+        visible: window.tabletDock
+        width: window.slotSize
+        height: window.slotSize
+        closeWindow: true
+        allowClose: !window.menuOpen
+      }"""
+    return transform(s, [
+        ('  readonly property bool shown:', '  readonly property bool tabletDock: screen?.name === "DSI-1" && position === "bottom"\n  readonly property bool shown:'),
+        ('dock.isFloating(workspaceId) && fullscreenMode', '(tabletDock || dock.isFloating(workspaceId)) && fullscreenMode'),
+        ('dock.autohide || fullscreenMode === 1', 'dock.autohide || (!tabletDock && fullscreenMode === 1)'),
+        ('  exclusiveZone: 0', '  exclusiveZone: tabletDock && shown && !autohide ? slotSize + gap : 0'),
+        ('? screen.height - bottom - window.height', '? screen.height - (window.exclusiveZone > 0 ? 0 : bottom) - window.height'),
+        ('appRepeater.count + 1', 'window.tabletDock ? 4 : 2'),
+        ('    var first = window.slotSize', '    var first = window.slotSize - appViewport.contentX'),
+        ("""      Repeater {
+        id: appRepeater
+        model: window.dock ? window.dock.itemModel : null
+
+        delegate: AppSlot {}
+      }""", """      Flickable {
+        id: appViewport
+        // Keep the grid and navigation reachable if many apps are open.
+        // Only the app icons scroll; with room to spare dragging reorders them.
+        width: window.tabletDock ? Math.min(contentWidth, Math.max(window.slotSize, window.width - 3 * window.slotSize - 2 * window.gap)) : contentWidth
+        height: contentHeight
+        contentWidth: appIcons.implicitWidth
+        contentHeight: appIcons.implicitHeight
+        interactive: window.tabletDock && contentWidth > width
+        clip: interactive
+        boundsBehavior: Flickable.StopAtBounds
+        flickableDirection: Flickable.HorizontalFlick
+        Grid {
+          id: appIcons
+          columns: window.vertical ? 1 : Math.max(1, appRepeater.count)
+          Repeater {
+            id: appRepeater
+            model: window.dock ? window.dock.itemModel : null
+            delegate: AppSlot {}
+          }
+        }
+      }""" + '\n' + button + '\n' + close),
+        ('      if (!(appSlot.mouse.pressedButtons & Qt.LeftButton)) return',
+         '      if (appViewport.interactive || !(appSlot.mouse.pressedButtons & Qt.LeftButton)) return'),
+    ], '// Trona dock touch navigation v1')
+
+
+def patch_grid_back(s):
+    anchor = '          Text {\n            anchors.left: parent.left\n            anchors.right: parent.right'
+    replacement = """          TronaNavButton {
+            id: gridBack
+            visible: panel.screen?.name === "DSI-1"
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            width: 48
+            height: 48
+            onBack: {
+              if (root.menuEntry) root.menuEntry = null
+              else if (root.filterText) root.setFilter("")
+              else root.close()
+            }
+          }
+          Text {
+            anchors.left: parent.left
+            anchors.right: gridBack.visible ? gridBack.left : parent.right"""
+    return transform(s, [(anchor, replacement)], '// Trona app grid back button v1')
+
+
+def transform(s, changes, marker=MARKER):
+    if marker in s:
         return s
     for old, new in changes:
         if s.count(old) != 1:
             raise RuntimeError('Omarchy source changed; review fast-app patch anchor: '+old)
         s=s.replace(old,new,1)
-    return MARKER+'\n'+s
+    return marker+'\n'+s
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
@@ -61,7 +139,8 @@ def main():
     args=ap.parse_args()
     # Validate every input before committing either file.
     pending=[]
-    for name,fn in [('services/AppLibrary.qml',patch_library),('plugins/dock/Dock.qml',patch_dock)]:
+    for name,fn in [('services/AppLibrary.qml',patch_library),('plugins/dock/Dock.qml',patch_dock),
+                    ('plugins/dock/DockWindow.qml',patch_dock_window),('plugins/dock/AppGrid.qml',patch_grid_back)]:
         p=args.shell_dir/name;old=p.read_text();new=fn(old)
         if new!=old:pending.append((p,new))
     for p,new in pending:

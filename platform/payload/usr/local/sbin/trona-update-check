@@ -107,6 +107,7 @@ def integration_check():
  if Path('/etc/systemd/system/serial-getty@ttyGS0.service.d/autologin.conf').exists():fail('Legacy serial autologin returned')
  checks={
  '/usr/share/omarchy/shell/services/AppLibrary.qml':'// Trona app responsiveness v1',
+ '/usr/share/omarchy/shell/plugins/dock/DockWindow.qml':'// Trona dock touch navigation v1',
  '/usr/share/omarchy/shell/plugins/dock/Dock.qml':'// Trona app responsiveness v1',
  '/usr/share/omarchy/shell/Ui/KeyboardPanel.qml':'WlrLayershell.layer: WlrLayer.Top',
  '/usr/share/omarchy/shell/plugins/bar/Bar.qml':'readonly property bool layoutLocked:',
@@ -119,6 +120,7 @@ def integration_check():
  '/home/trona/.config/hypr/trona-rotation.lua':'/usr/share/trona-platform/hypr/trona-rotation.lua'}
  for path,marker in checks.items():
   if marker not in Path(path).read_text():fail('Tablet-Integration fehlt: '+path)
+ if '// Trona app grid back button v1' not in Path('/usr/share/omarchy/shell/plugins/dock/AppGrid.qml').read_text():fail('App-grid navigation missing')
  if 'dofile("/usr/share/trona-platform/hypr/trona-windows.lua")' not in (HOME/'.config/hypr/hyprland.lua').read_text():fail('Tablet window rules missing')
  data=json.loads((HOME/'.config/omarchy/shell.json').read_text())
  if data['bar'].get('position')!='top' or data['bar'].get('locked') is not True:fail('Tablet-Leiste entsperrt/verschoben')

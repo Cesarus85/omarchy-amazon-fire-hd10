@@ -67,9 +67,9 @@ reduction while the old focus path remained about 85 ms, isolating the two gains
 
 ## Persistence and checks
 
-`trona-fast-apps` validates both source files before writing either, refuses
+`trona-fast-apps` validates its shell source files before writing any of them, refuses
 changed upstream anchors, and is idempotent. The platform update repair hook
-reapplies it and verifies both integration markers. The normal guarded package
+reapplies it and verifies the integration markers. The normal guarded package
 transaction retains the same arch14 kernel/module ABI. Portable tests cover
 argument-vector scope preservation, the non-minimized focus branch and refusal
 to partially patch when the second upstream file is incompatible.

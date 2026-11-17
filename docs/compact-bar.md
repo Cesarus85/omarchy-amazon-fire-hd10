@@ -43,18 +43,20 @@ To customize later, edit `bar.layout` or use Omarchy's normal bar tools. An omit
 widget can be moved from `bar.tronaCompactHidden` into a visible section. Keep
 `bar.locked=true` for touch use.
 
-## Bottom touch controls
+## Touch controls in the app dock
 
-The Trona platform package adds three buttons along the bottom of the built-in
-display. Each button has a 48-logical-pixel-high touch target. The row reserves
-52 logical pixels. Opening the on-screen keyboard places it immediately above
-the row. The existing status widgets keep their space at the top.
+The built-in display uses Omarchy's bottom dock for navigation. Tap the nine
+dots to open the app grid, or tap an app icon to open or switch to that app.
+The two icons at the right use the same touch target size as the app icons.
 
-- **Apps** opens or dismisses Omarchy's app grid.
-- **Zurück / Esc** sends Escape to the focused app or menu. Its behavior in
-  an app is the same as pressing the physical Esc key.
-- **Schließen** asks the active window to close. Applications can still prompt
-  to save. The button is disabled while the app grid covers the window.
+- **←** sends Escape to the focused app. In the app grid the arrow is beside
+  the search field. It dismisses an open app menu, clears a search, or returns
+  to the desktop.
+- **×** asks the active window to close. Applications can prompt to save.
+  The app grid has its own Back button so a window underneath stays safe.
 
-On the desktop keyboard, tap **Super**, **Alt**, then **W** to close the
-focused window. On a hardware keyboard, hold both modifiers while pressing W.
+The dock reserves its icon row on tiled and floating workspaces. A true
+fullscreen app can use the entire screen. When the row fills up, swipe the
+app icons sideways. On the screen keyboard, **Super**, **Alt**, then **W**
+also closes the active window. On a hardware keyboard, hold both modifiers
+while pressing W.

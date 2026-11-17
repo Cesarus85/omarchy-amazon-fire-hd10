@@ -1,0 +1,9 @@
+[Unit]
+Description=Show the tablet keyboard on editable desktop fields
+PartOf=graphical-session.target
+After=graphical-session-pre.target
+
+[Service]
+ExecStart=/usr/local/libexec/trona-keyboard-focus
+Restart=on-failure
+RestartSec=2

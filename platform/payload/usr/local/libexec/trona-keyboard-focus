@@ -1,0 +1,103 @@
+#!/usr/bin/python3
+"""Follow desktop text focus. Only query control state and identity."""
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+import gi
+
+gi.require_version("Atspi", "2.0")
+from gi.repository import Atspi, GLib
+
+CONTROL = "/usr/local/bin/trona-keyboard-control"
+
+
+def enable_browser_forms():
+    # The Chrome launcher reads this per-user file for browsers and web apps.
+    config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    config.mkdir(parents=True, exist_ok=True)
+    with (config / "chrome-flags.conf").open("a+", encoding="utf-8") as flags:
+        flags.seek(0)
+        original = flags.read()
+        options = [word for line in original.splitlines() if not line.lstrip().startswith("#")
+                   for word in line.split()]
+        if any(word.startswith("--force-renderer-accessibility") or
+               word == "--disable-renderer-accessibility" for word in options):
+            return
+        if original and not original.endswith("\n"):
+            flags.write("\n")
+        flags.write("--force-renderer-accessibility=form-controls\n")
+
+
+class FocusKeyboard:
+    def __init__(self):
+        self.field = None
+        self.window = None
+        self.applied = None
+        self.timer = 0
+        self.changed_at = 0
+        self.listener = Atspi.EventListener.new(self.event, None)
+        for kind in ("object:state-changed:focused", "window:deactivate", "window:destroy"):
+            self.listener.register(kind)
+
+    def set_field(self, field):
+        if field == self.field:
+            return
+        self.field = field
+        self.window = None
+        if field is not None:
+            node = field
+            # The accessible directly below the application is its window.
+            for _ in range(64):
+                parent = node.get_parent()
+                if parent is None or parent.get_role() == Atspi.Role.APPLICATION:
+                    self.window = node
+                    break
+                node = parent
+        self.changed_at = time.monotonic()
+        if self.timer:
+            GLib.source_remove(self.timer)
+        self.timer = GLib.timeout_add(160 if field is not None else 320, self.apply)
+
+    def event(self, event, *_):
+        try:
+            source = event.source
+            if event.type.startswith("window:"):
+                if self.window is not None and source == self.window:
+                    self.set_field(None)
+            elif event.detail1:
+                state = source.get_state_set()
+                editable = state.contains(Atspi.StateType.EDITABLE)
+                readonly = state.contains(Atspi.StateType.READ_ONLY)
+                self.set_field(source if editable and not readonly else None)
+            elif self.field is not None and source == self.field:
+                self.set_field(None)
+        except GLib.Error:
+            # A client may have closed its window during a query.
+            if event.source == self.field:
+                self.set_field(None)
+
+    def apply(self):
+        self.timer = 0
+        if self.field == self.applied:
+            return False
+        action = "auto-show" if self.field is not None else "auto-hide"
+        result = subprocess.run([CONTROL, action, str(self.changed_at)],
+                                stdout=subprocess.DEVNULL)
+        if result.returncode == 75:
+            self.timer = GLib.timeout_add(200, self.apply)
+        elif result.returncode == 0:
+            self.applied = self.field
+        return False
+
+
+if __name__ == "__main__":
+    try:
+        enable_browser_forms()
+    except (OSError, UnicodeError) as error:
+        print(f"Chrome focus configuration unavailable: {error}", file=sys.stderr)
+    Atspi.set_timeout(500, 1000)
+    watcher = FocusKeyboard()
+    Atspi.event_main()

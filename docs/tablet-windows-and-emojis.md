@@ -97,3 +97,9 @@ keyboard builds successfully. The owner confirmed `!@#?€` followed by `abc`
 in a browser text field in both portrait and landscape after installation.
 Package verification reports 205 files with zero altered files; the existing
 update guards passed. No reboot was needed.
+
+## Automatic desktop keyboard
+
+On the Trona desktop, focusing an editable field opens the keyboard. Moving to another field keeps it open. Leaving the field hides it after a short delay. The keyboard button in the top bar still works in every app. If you hide it manually, typing in the same field keeps it hidden. Moving to a new editable field enables automatic display again.
+
+Platform 2026.11.17-5 starts a per-user listener with the graphical session. It uses AT-SPI focus events and checks whether the focused control is editable. It does not request text or keystrokes. Chrome and its web apps pick up form-control accessibility from the user's launcher flags on their next full launch. Existing explicit Chromium accessibility flags take precedence. Apps without editable accessibility controls can use the manual button. The session lock has its own keyboard.

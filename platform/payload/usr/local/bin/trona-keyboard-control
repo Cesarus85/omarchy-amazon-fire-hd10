@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""User-facing keyboard visibility, persisted across rotation and login."""
+"""Desktop keyboard visibility shared by the manual control and focus listener."""
 import fcntl,json,os,pathlib,subprocess,sys,time
 
 def command(*args):
@@ -14,24 +14,35 @@ def visible():
 def main():
     if os.getuid()==0:raise RuntimeError('Run as the desktop user')
     action=sys.argv[1] if len(sys.argv)>1 else 'toggle'
-    if action not in ['toggle','show','hide','status']:raise RuntimeError('Use toggle, show, hide or status')
+    automatic=action in ('auto-show','auto-hide')
+    if not automatic and action not in ['toggle','show','hide','status']:raise RuntimeError('Use toggle, show, hide or status')
     runtime=pathlib.Path(os.environ['XDG_RUNTIME_DIR'])
-    state=pathlib.Path.home()/'.local/state/trona/keyboard-visible'
+    state=runtime/'trona-keyboard-visible'
+    if action == 'status':
+        print(json.dumps({'visible': visible(), 'saved_visible': state.exists() and state.read_text().strip() == '1'}))
+        return
     with (runtime/'trona-rotation.lock').open('w') as rotation_lock, (runtime/'trona-keyboard-control.lock').open('w') as lock:
-        try:fcntl.flock(rotation_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        except BlockingIOError:return
-        try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        except BlockingIOError:return
+        mode = fcntl.LOCK_EX | (fcntl.LOCK_NB if automatic else 0)
+        try:
+            fcntl.flock(rotation_lock, mode)
+            fcntl.flock(lock, mode)
+        except BlockingIOError:
+            raise SystemExit(75)
         old=visible()
-        if action=='status':
-            print(json.dumps({'visible':old,'saved_visible':state.read_text().strip()!='0' if state.exists() else True}));return
         stamp=runtime/'trona-keyboard-control.last'
         if action=='toggle' and stamp.exists() and time.monotonic()-float(stamp.read_text())<.5:return
-        target=not old if action=='toggle' else action=='show'
+        if automatic and stamp.exists() and float(stamp.read_text()) >= float(sys.argv[2]):return
+        target=not old if action=='toggle' else action in ('show','auto-show')
+        if automatic and target:
+            monitors=json.loads(command('/usr/bin/hyprctl','-i','0','-j','monitors'))
+            panel=next((m for m in monitors if m.get('name')=='DSI-1'),{})
+            blockers=panel.get('solitaryBlockedBy')
+            if not panel.get('dpmsStatus') or blockers is None or 'LOCK' in blockers or 'WORKSPACE' in blockers:return
         state.parent.mkdir(parents=True,exist_ok=True)
         def save(value):
             temp=state.with_suffix('.tmp');temp.write_text('1\n' if value else '0\n');temp.replace(state)
         save(target)
+        if automatic and old==target:return
         try:
             # Removing the virtual keyboard also releases any latched modifiers.
             command('/usr/bin/systemctl','--user','restart' if target else 'stop','trona-keyboard.service')
@@ -43,7 +54,7 @@ def main():
             save(old)
             command('/usr/bin/systemctl','--user','restart' if old else 'stop','trona-keyboard.service')
             raise
-        stamp.write_text(str(time.monotonic()))
+        if not automatic:stamp.write_text(str(time.monotonic()))
         print(json.dumps({'visible':target,'verified':True}))
 
 if __name__=='__main__':

@@ -103,3 +103,5 @@ update guards passed. No reboot was needed.
 On the Trona desktop, focusing an editable field opens the keyboard. Moving to another field keeps it open. Leaving the field hides it after a short delay. The keyboard button in the top bar still works in every app. If you hide it manually, typing in the same field keeps it hidden. Moving to a new editable field enables automatic display again.
 
 Platform 2026.11.17-5 starts a per-user listener with the graphical session. It uses AT-SPI focus events and checks whether the focused control is editable. It does not request text or keystrokes. Chrome and its web apps pick up form-control accessibility from the user's launcher flags on their next full launch. Existing explicit Chromium accessibility flags take precedence. Apps without editable accessibility controls can use the manual button. The session lock has its own keyboard.
+
+On the reference tablet, the owner confirmed all four steps by touch in Chrome. Tapping the first field opened the keyboard. Hiding it with the top-bar button kept it hidden in that field. Tapping the second field reopened it, and tapping “Fertig” hid it again.

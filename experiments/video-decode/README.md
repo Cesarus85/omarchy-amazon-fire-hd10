@@ -4,6 +4,16 @@ This experiment **does not produce valid decoded video on the reference Trona**.
 It is retained for driver development. Do not add it to the normal installer or
 advertise browser acceleration. See [results and next investigation](../../docs/video-decoding.md).
 
+The 2026-11-17 follow-up found a reproducible DEVAPC-denied write to
+`0x16000000` during H.264 initialization. [read-access-state.py](read-access-state.py)
+captures SCP remap and DEVAPC diagnostic status using read-only `/dev/mem` mappings
+on Trona. Run as root only on a developer test device; it does not start SCP,
+select diagnostic FIFOs, clear status or alter access policy. Capture before and
+after the isolated decoder test to distinguish pre-existing status. Its DBG words
+may be stale; the precise FIFO event in the evidence was obtained separately.
+No permission-changing script is provided because a targeted, verified Fire
+secure-firmware interface has not been established.
+
 ## Reproduce the build, without accessing a tablet
 
 Use a **separate copy** of a completed arch14 kernel/module build from the

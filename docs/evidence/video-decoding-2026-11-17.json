@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-17",
+  "board": "amazon,trona / MT8183",
+  "kernel": "6.18.56-trona-arch14",
+  "status": "hardware_decode_failed_not_enabled",
+  "experiment": {
+    "unchanged_kernel_executable": true,
+    "dt_reserved_pool_bytes": 8388608,
+    "scp_running": true,
+    "decoder_registered": true,
+    "stream": "640x480 H.264 Baseline, one-frame attempts",
+    "valid_hardware_frames_confirmed": false
+  },
+  "scp_mapping": {
+    "secure_ctrl": "0x00000800",
+    "remap_disable_bit_set": false,
+    "remap_words": [
+      "0x07060504",
+      "0x02010008",
+      "0x10090a03"
+    ],
+    "decoder_translation": "SCP 0xA602xxxx -> AP 0x1602xxxx",
+    "modified": false
+  },
+  "access_failure": {
+    "matching_decode_attempts": 2,
+    "violation_index": 248,
+    "slave": "VDECSYS_GLOBAL_CON",
+    "debug_word": "0x00430026",
+    "target_address": "0x16000000",
+    "bus_master_id": "0x26",
+    "domain": 3,
+    "operation": "write",
+    "attribution": "SCP attribution inferred from isolated decode trigger; raw master ID retained",
+    "ap_control_read": {
+      "address": "0x1000ea00",
+      "bus_master_id": "0x4b",
+      "domain": 0,
+      "operation": "read",
+      "result": "denied; zero configuration readback not trustworthy"
+    }
+  },
+  "policy_changes": {
+    "secure_permission_register_writes": false,
+    "global_protection_disabled": false,
+    "secure_monitor_calls_tested": false,
+    "secure_firmware_flashed": false,
+    "verified_targeted_permission_interface_found": false,
+    "diagnostic_fifo_selection_and_target_status_acknowledgement": true
+  },
+  "restoration": {
+    "original_boot_restored_and_rebooted": true,
+    "scp_disabled": true,
+    "test_modules_not_loaded": true,
+    "test_files_removed_from_tablet": true,
+    "update_integrity_check": "passed",
+    "platform_files_checked": 183,
+    "platform_files_altered": 0,
+    "failed_system_units": 0,
+    "desktop_process_running": true,
+    "network_manager_active": true,
+    "bluetooth_service_active": true,
+    "standby_service_active": true,
+    "both_cluster_max_khz": 1989000,
+    "physical_post_restore_wake_test": "not repeated this session",
+    "read_only_diagnostic_executed_after_restore": true,
+    "vdecsys_global_con_violation_pending_after_restore": false
+  },
+  "next_gate": "Verified narrowly scoped decoder permission grant in Fire boot chain, then actual output-frame and stability qualification; no browser acceleration enabled."
+}

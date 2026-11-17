@@ -1,4 +1,4 @@
-# Video decoding investigation — 2026-11-16
+# Video decoding investigation — updated 2026-11-17
 
 **Hardware video decoding remains disabled.** The test brought up the MT8183
 SCP and decoder device, but both tested userspace paths failed to produce valid
@@ -74,11 +74,67 @@ log string is `init BarelShift fail`. Correctly indexed VDEC_LD register reads
 in the kernel after the failed request were zero at offsets `0x8c`, `0xb0`,
 `0xc8`, `0xe8`, `0xf4`, `0x108` and `0x110`; decoder IRQ count remained zero.
 
-This narrows the next investigation to the decoder hardware access / reset /
-clock / bus setup and the SCP's view of it on the Fire boot chain. It does **not**
-prove which of those is wrong. Do not disable global access protections or
-change unrelated PMIC/clock settings speculatively. The next useful evidence is
-an AP-versus-SCP register/access comparison against the stock MT8183 setup.
+The follow-up below identifies an access-control failure during this operation.
+It does not establish that resolving that failure would be sufficient for correct
+decoding; output-frame and stability qualification remain necessary.
+
+## SCP access investigation — 2026-11-17
+
+The same isolated DT/module candidate was tested again. The SCP address remap
+matches the MT8183 Chromium EC initialization: its `0xA602xxxx` decoder accesses
+map to AP physical `0x1602xxxx`. `SCP_SECURE_CTRL` was `0x800`, with the remap-disable
+bit clear. The three active remap words were `0x07060504`, `0x02010008`,
+`0x10090a03`. No remap or security-control bits were changed.
+
+**DEVAPC records a denied write to the decoder control block during H.264
+initialization.** Before decoding, VDECSYS_GLOBAL_CON violation status was clear.
+After a one-frame Baseline H.264 attempt, status index 248 was set. Selecting its
+diagnostic FIFO produced:
+
+| Field | Observed value |
+| --- | --- |
+| DEVAPC debug word | `0x00430026` |
+| Target address | `0x16000000` — VDECSYS_GLOBAL_CON |
+| Bus master ID | `0x26` |
+| Domain | `3` |
+| Operation | Write |
+
+After acknowledging only that decoder diagnostic status and repeating the frame,
+the same record returned. The SCP attribution follows the isolated decode trigger;
+the raw master ID is retained rather than equated with a DEVAPC configuration
+table index. A separate AP read of a protected DEVAPC configuration register
+reported master `0x4b`, domain `0`, read at `0x1000ea00`. Thus ordinary Linux/AP
+access and the denied decoder transaction are distinguishable.
+
+Reads of the secure DEVAPC AO configuration returned zeros **and caused an access
+violation**. Those zeros cannot be interpreted as permissive settings. Diagnostic
+FIFO selection/acknowledgement was used, but no access-policy register was written.
+Reading a FIFO entry consumes its debug data; a repeated empty debug word without
+a fresh event is not evidence that the denial disappeared.
+
+Upstream TF-A initializes the SCP in domain 1 and grants that domain access to
+VDECSYS_GLOBAL_CON and VDECSYS_FULL_TOP. That is a reference configuration, **not
+the Fire's verified active policy**. The Fire vendor kernel exposes a DEVAPC debug
+dump call and several broader secure-monitor services, but this investigation did
+not find a verified interface for changing only the required decoder permissions.
+The vendor-wrapped ATF payload read from `tee1` did not provide directly inspectable
+AArch64 code; no secure firmware was modified or flashed.
+
+The next prerequisite is a verified, narrowly scoped way to grant the SCP decoder
+register access through the Fire boot chain. Do not blindly invoke DEVAPC init,
+change the SCP to domain 0, or disable protection globally. If a firmware change
+is required, establish its exact handler, policy, boot compatibility and recovery
+route first. Then repeat hardware frame comparison, repeated playback, seeking and
+post-standby tests before browser integration. The current experiment remains
+unsuitable for the normal installer.
+
+The [follow-up evidence](evidence/video-decoding-2026-11-17.json) records the two
+matching denial events and restoration checks. Source references:
+
+- [MT8183 SCP remapping implementation](https://chromium.googlesource.com/chromiumos/platform/ec/+/be4498ebc2ee23e72c9b4919d48cc5bf692f68c0/chip/mt_scp/mt818x/memmap.c)
+- [Amazon MT8183 DEVAPC driver and violation mapping](https://github.com/amazon-mt8183-devs/android_kernel_amazon_mt8183/blob/7ec747b431c61293a00ed6a01f2a01fa50c6afde/drivers/misc/mediatek/devapc/mt8183/devapc.c)
+- [TF-A MT8183 DEVAPC initialization](https://github.com/ARM-software/arm-trusted-firmware/blob/master/plat/mediatek/mt8183/drivers/devapc/devapc.c)
+- [TF-A MT8183 permissions table](https://github.com/ARM-software/arm-trusted-firmware/blob/master/plat/mediatek/mt8183/drivers/devapc/devapc.h)
 
 ## Browser bridge boundary
 

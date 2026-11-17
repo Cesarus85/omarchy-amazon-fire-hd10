@@ -11,7 +11,10 @@ an operational decoder, actual decoded frames and a measured playback comparison
 before enabling a browser acceleration path by default. Preserve the working
 boot, camera, CPU DVFS, standby and wake behavior. The first kernel/firmware
 bring-up reached the decoder but failed on every frame; the working system was
-restored. See [the measurements and next driver investigation](video-decoding.md).
+restored. The 2026-11-17 follow-up reproduced a DEVAPC-denied write to decoder
+control address `0x16000000` from domain 3. SCP remapping is consistent with the
+upstream setup; a verified, targeted permission change through the Fire secure
+firmware remains unresolved. See [the measurements and access investigation](video-decoding.md).
 
 ## Later: further performance optimization
 

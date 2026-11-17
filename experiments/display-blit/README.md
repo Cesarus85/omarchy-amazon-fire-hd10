@@ -19,3 +19,5 @@ The root-only parameter starts disabled. To try the direct copy and then switch 
 The reference tablet's platform package includes the adjacent tmpfiles rule under /etc/tmpfiles.d and records it in the integrity manifest. That enables the direct path at boot. For a full rollback use the previous matched boot image and platform package. The standard installer continues to build its existing configuration.
 
 The on-device reference test compared 4,800 clipping and alignment cases byte for byte, including row padding. After a second boot the parameter read Y, the guarded platform check passed, all 206 package files passed verification and the H.264 decoder self-test produced the reference frame hash.
+
+The owner unlocked the reference tablet by touch after reboot. With the direct copy active, they confirmed that colours and text looked correct and that touch scrolling and rotation showed no visible streaks or stale areas.

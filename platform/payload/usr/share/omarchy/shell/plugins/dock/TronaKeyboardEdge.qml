@@ -10,6 +10,7 @@ import qs.Commons as Commons
 PanelWindow {
   id: edge
   required property bool tracking
+  required property int dockHeight
   required property bool interacting
   property bool keyboardMapped: false
   property bool peeking: false
@@ -19,11 +20,27 @@ PanelWindow {
   anchors.bottom: true
   implicitWidth: 144
   implicitHeight: 12
+  margins.bottom: peeking ? dockHeight : 0
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.namespace: "trona-keyboard-grip"
   WlrLayershell.layer: WlrLayer.Overlay
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
   color: "transparent"
+
+  // A top-layer reservation moves the keyboard inward. The dock and its
+  // popups draw on the overlay layer so its menus remain touchable.
+  PanelWindow {
+    screen: edge.screen
+    visible: edge.visible && edge.peeking
+    anchors { left: true; right: true; bottom: true }
+    implicitHeight: edge.dockHeight + edge.implicitHeight
+    exclusiveZone: implicitHeight
+    WlrLayershell.namespace: "trona-keyboard-dock-space"
+    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    mask: Region {}
+    color: "transparent"
+  }
 
   function refresh() {
     revision++
@@ -94,12 +111,20 @@ PanelWindow {
     mouseEnabled: false
     property real startX
     property real startY
-    onPressed: points => { startX = points[0].x; startY = points[0].y }
+    property bool closing
+    onPressed: points => {
+      startX = points[0].x; startY = points[0].y
+      closing = edge.peeking
+    }
     onGestureStarted: gesture => gesture.grab()
     onReleased: points => {
       const up = startY - points[0].y
-      if (up >= 28 && up > Math.abs(points[0].x - startX)) {
-        edge.peeking = !edge.peeking
+      const side = Math.abs(points[0].x - startX)
+      if (closing) {
+        if ((Math.abs(up) >= 24 && Math.abs(up) > side) || (Math.abs(up) < 8 && side < 8))
+          edge.peeking = false
+      } else if (up >= 28 && up > side) {
+        edge.peeking = true
       }
     }
   }

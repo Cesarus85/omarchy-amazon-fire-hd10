@@ -48,6 +48,9 @@ widget can be moved from `bar.tronaCompactHidden` into a visible section. Keep
 The built-in display uses Omarchy's bottom dock for navigation. Tap the nine
 dots to open the app grid, or tap an app icon to open or switch to that app.
 The two icons at the right use the same touch target size as the app icons.
+Hold an app icon in the dock for about half a second to open its menu. Choose
+**Remove from dock** to unpin the app, or **Keep in dock** to pin a running
+app. A running app remains visible until its last window closes.
 
 - **←** sends Escape to the focused app. In the app grid the arrow is beside
   the search field. It dismisses an open app menu, clears a search, or returns
@@ -57,8 +60,11 @@ The two icons at the right use the same touch target size as the app icons.
 
 With the screen keyboard open, the dock releases its row to the focused app.
 Swipe up from the small grip at the bottom centre of the screen to show the
-dock above the keyboard. It overlays the app for six seconds. A second upward
-swipe dismisses it early. Closing the keyboard restores the usual dock.
+dock below the keyboard. The keyboard moves up while the dock is visible.
+Swipe down from the icons or tap the grip between the keyboard and the dock
+to dismiss it. It also hides after six seconds of inactivity. An open dock
+menu stays available while you choose an action. Closing the keyboard
+restores the usual dock.
 This works with both automatic and manual keyboard visibility.
 
 With the keyboard closed, the dock reserves its icon row on tiled and floating workspaces. A true

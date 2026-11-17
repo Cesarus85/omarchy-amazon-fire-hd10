@@ -101,7 +101,7 @@ def patch_dock_window(s):
         ('      if (!(appSlot.mouse.pressedButtons & Qt.LeftButton)) return',
          '      if (appViewport.interactive || !(appSlot.mouse.pressedButtons & Qt.LeftButton)) return'),
     ], '// Trona dock touch navigation v1')
-    return transform(s, [
+    s = transform(s, [
         ('  readonly property bool shown: !!dock', """  TronaKeyboardEdge {
     id: keyboardEdge
     screen: window.screen
@@ -115,6 +115,32 @@ def patch_dock_window(s):
         ('WlrLayershell.layer: WlrLayer.Top', 'WlrLayershell.layer: keyboardEdge.peeking ? WlrLayer.Overlay : WlrLayer.Top'),
         ('    id: body\n', '    id: body\n    PointHandler { id: bodyPress; acceptedButtons: Qt.AllButtons }\n'),
     ], '// Trona keyboard-aware dock v1')
+    return transform(s, [
+        ('    tracking: window.tabletDock', '    tracking: window.tabletDock\n    dockHeight: window.slotSize + window.gap'),
+        ('  exclusiveZone: tabletDock && shown', '  exclusiveZone: keyboardEdge.peeking ? -1 : tabletDock && shown'),
+        ('    PointHandler { id: bodyPress; acceptedButtons: Qt.AllButtons }', """    PointHandler { id: bodyPress; acceptedButtons: Qt.AllButtons }
+    DragHandler {
+      enabled: keyboardEdge.peeking && !window.menuOpen
+      target: null
+      acceptedDevices: PointerDevice.TouchScreen
+      xAxis.enabled: false
+      onActiveTranslationChanged: {
+        if (active && activeTranslation.y >= 24) keyboardEdge.peeking = false
+      }
+    }"""),
+        ('    mouse.onPressed: function(event) {\n      appSlot.dragged = false', """    property bool heldForMenu: false
+    mouse.pressAndHoldInterval: 550
+    mouse.onPressAndHold: function(event) {
+      if (!window.tabletDock || event.button !== Qt.LeftButton || appSlot.dragged || appViewport.dragging || window.dragging) return
+      appSlot.heldForMenu = true
+      window.openMenu(appSlot.modelData, appSlot)
+    }
+    mouse.onPressed: function(event) {
+      appSlot.heldForMenu = false
+      appSlot.dragged = false"""),
+        ('if (appViewport.interactive || !(appSlot.mouse.pressedButtons', 'if (appSlot.heldForMenu || appViewport.interactive || !(appSlot.mouse.pressedButtons'),
+        ('      if (appSlot.dragged) {', '      if (appSlot.heldForMenu || appSlot.dragged) {'),
+    ], '// Trona dock hold and dismiss v1')
 
 
 def patch_grid_back(s):

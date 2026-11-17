@@ -1,0 +1,17 @@
+#!/usr/bin/python3
+"""Integrate the guarded launcher into the distribution's Chrome wrapper."""
+from pathlib import Path
+import os, tempfile
+p=Path('/usr/bin/google-chrome-stable')
+old='exec /opt/google/chrome/google-chrome $CHROME_USER_FLAGS "$@"'
+new='exec /usr/local/libexec/trona-chrome-video $CHROME_USER_FLAGS "$@"'
+s=p.read_text()
+if new not in s:
+ if s.count(old)!=1:raise SystemExit('Chrome wrapper changed; review video integration')
+ s=s.replace(old,new,1);st=p.stat()
+ fd,name=tempfile.mkstemp(prefix='.trona-chrome-',dir=p.parent)
+ try:
+  with os.fdopen(fd,'w') as f:f.write(s);f.flush();os.fsync(f.fileno())
+  os.chmod(name,st.st_mode & 0o777);os.chown(name,st.st_uid,st.st_gid);os.replace(name,p)
+ finally:
+  if os.path.exists(name):os.unlink(name)

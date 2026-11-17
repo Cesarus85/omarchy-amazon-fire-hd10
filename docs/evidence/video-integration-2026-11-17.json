@@ -1,0 +1,84 @@
+{
+  "kernel_executable_unchanged": true,
+  "candidate_boot_sha256": "562222ddd8559fe6a6dd28b2a0fd6c9a43feb0b5011f05cd2711dcc4e37241c4",
+  "baseline_boot_sha256": "846dfe2149295f714851625530d0908cc4caa51614e42fb8bce6f188208f948d",
+  "scp_firmware_sha256": "058d707c53ba0bc2c66ffd67b36f1a0fcbad3ab29e7489ad681af640f9d89616",
+  "kernel": "6.18.56-trona-arch14",
+  "package": "trona-platform 2026.11.17-2",
+  "source_tests": 8,
+  "status": "reference_tablet_h264_enabled_with_guarded_browser_and_accepted_resume",
+  "boot_selftest": {
+    "passed": true,
+    "format": "NV12",
+    "frames": 60,
+    "resolution": [
+      640,
+      480
+    ],
+    "sha256": "b729c484ee37f9c06bcd7e370690753937cf3dc9f877f328e1d3d596fe93cc2c"
+  },
+  "browser": {
+    "default": {
+      "decoders": [
+        "VaapiVideoDecoder"
+      ],
+      "elapsed_seconds": 20.001863539999988,
+      "frames": 601,
+      "dropped_frames": 0,
+      "error": null
+    },
+    "fallback": {
+      "decoders": [
+        "FFmpegVideoDecoder"
+      ],
+      "elapsed_seconds": 20.00231638599996,
+      "frames": 602,
+      "dropped_frames": 0,
+      "error": null
+    },
+    "visibility": "behind authenticated startup screen; no visual or foreground performance acceptance"
+  },
+  "proxy_unload_with_scp_loaded": "rejected by kernel module dependency",
+  "permanent_global_libva_environment": false,
+  "normal_installer_enabled": false,
+  "platform_files_checked": 205,
+  "platform_files_altered": 0,
+  "physical_resume_with_new_touch_recovery": {
+    "owner_confirmed": [
+      "video continues",
+      "touch unlocking works",
+      "menu responds normally"
+    ],
+    "sleep_seconds": 23.959553241729736,
+    "touch_reinitialized": true,
+    "proxy_errors": 0,
+    "proxy_resume_count": 1,
+    "decoder": "VaapiVideoDecoder",
+    "frames_before_postwake_interval": 660,
+    "frames_after_postwake_interval": 1139,
+    "dropped_before_postwake_interval": 15,
+    "dropped_after_postwake_interval": 22,
+    "camera_clock_or_regulator_warnings": false
+  },
+  "camera_stream_across_sleep": "pending",
+  "second_boot": {
+    "boot_selftest_passed": true,
+    "owner_touch_login_and_desktop_accepted": true,
+    "failed_system_units": 0,
+    "cluster_max_khz": [
+      1989000,
+      1989000
+    ]
+  },
+  "public_dtb_rebuild_identical": true,
+  "public_stage_reproduces_package_manifest": true,
+  "touch_reset_smoke_test": "passed, input device returned; physical acceptance pending",
+  "private_package_sha256": "373b947b4988bf46ea981fa49ec8780eef518f5474003350f47841a6b01d2de3",
+  "qualification_limits": [
+    "wider real-world stream coverage and long-term stability",
+    "other codecs remain software/unqualified",
+    "active camera stream across system sleep not tested",
+    "original intermittent touch root cause not proven; reinitialization workaround accepted",
+    "not enabled by standard installer"
+  ]
+}

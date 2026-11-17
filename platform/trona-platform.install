@@ -5,6 +5,9 @@ post_install() {
   depmod 6.18.56-trona-arch14
   systemctl daemon-reload
   systemctl enable trona-boot-guard.service
+  if [ -f /etc/systemd/system/trona-video.service ]; then
+    systemctl enable trona-video.service
+  fi
   # Move only identical integration units into package ownership. User edits survive.
   for unit in trona-auto-rotate trona-fit-windows trona-keyboard trona-sd-mount; do
     if python3 -c 'import pathlib,sys; a,b=map(pathlib.Path,sys.argv[1:]); sys.exit(0 if a.is_file() and a.read_bytes()==b.read_bytes() else 1)' "/home/trona/.config/systemd/user/$unit.service" "/usr/lib/systemd/user/$unit.service"; then

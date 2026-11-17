@@ -18,6 +18,7 @@ jobs:
       - run: python3 tests/test-legacy-proxy.py
       - run: python3 tests/test-tablet-windows.py
       - run: python3 tests/test-unicode-insert.py
+      - run: python3 tests/test-video-integration.py
       - run: sudo apt-get update -qq && sudo apt-get install -y fdisk
       - run: python3 tests/test-installer.py
       - run: python3 tests/test-rotation-policy.py

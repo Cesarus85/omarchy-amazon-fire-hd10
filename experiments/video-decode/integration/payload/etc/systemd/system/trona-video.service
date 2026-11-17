@@ -1,0 +1,14 @@
+[Unit]
+Description=Trona guarded H.264 hardware decoder
+After=systemd-udev-trigger.service trona-boot-guard.service
+Before=trona-desktop.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/trona-video-check
+RemainAfterExit=yes
+TimeoutStartSec=50
+ExecStop=/usr/bin/rm -f /run/trona-video/ready.json
+
+[Install]
+WantedBy=multi-user.target

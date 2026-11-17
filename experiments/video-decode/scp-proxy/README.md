@@ -100,10 +100,17 @@ The tested sequence on a fresh candidate boot was:
    and run bounded synthetic tests. Inspect kernel and SCP errors as well as
    output; successful EOS alone proved misleading in the original experiment.
 
-No autoload configuration, browser defaults or package ownership was changed.
-The tested host worker sleeps after inactivity; it still holds an SCP clock
-reference. Suspend/resume and concurrent-client recovery are not implemented
-or qualified. Do not suspend an active test. Do not unload the worker while
+The original isolated tests changed no autoload configuration, browser defaults
+or package ownership. The subsequent [optional integration](../integration/README.md)
+adds guarded startup and browser selection, plus a hard SCP module dependency
+that prevents unloading the worker too early.
+The tested host worker sleeps after inactivity. The extended prototype also
+participates in the freezer and releases/reacquires its SCP clock reference.
+Two physical sleep cycles resumed video, but one had a Touch failure, so full
+system suspend/resume remains unqualified. Two concurrent synthetic decoder
+clients matched software output; broader error recovery remains unqualified.
+Suspend tests require a supervised recovery path, not ordinary daily use.
+Do not unload the worker while
 the patched SCP may issue MMIO requests. For final cleanup, stop test clients,
 restore the verified normal boot/guard, reboot, verify SCP is disabled, and
 remove all temporary modules/firmware/media. Merely unloading the `.ko` is

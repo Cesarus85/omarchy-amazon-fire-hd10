@@ -539,7 +539,35 @@ unlock_and_return:
 	return ret;
 }
 
+static int ov02b10_system_suspend(struct device *dev)
+{
+	struct ov02b10 *sensor = to_ov02b10(dev_get_drvdata(dev));
+	int ret = 0;
+
+	mutex_lock(&sensor->mutex);
+	if (sensor->streaming)
+		ret = __ov02b10_stop_stream(sensor);
+	if (!ret)
+		ret = pm_runtime_force_suspend(dev);
+	mutex_unlock(&sensor->mutex);
+	return ret;
+}
+
+static int ov02b10_system_resume(struct device *dev)
+{
+	struct ov02b10 *sensor = to_ov02b10(dev_get_drvdata(dev));
+	int ret;
+
+	mutex_lock(&sensor->mutex);
+	ret = pm_runtime_force_resume(dev);
+	if (!ret && sensor->streaming)
+		ret = __ov02b10_start_stream(sensor);
+	mutex_unlock(&sensor->mutex);
+	return ret;
+}
+
 static const struct dev_pm_ops ov02b10_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(ov02b10_system_suspend, ov02b10_system_resume)
 	SET_RUNTIME_PM_OPS(ov02b10_power_off, ov02b10_power_on, NULL)
 };
 

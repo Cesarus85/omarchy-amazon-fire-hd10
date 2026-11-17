@@ -1,0 +1,44 @@
+#!/usr/bin/python3
+"""Bounded boot self-test. Failure leaves normal software decoding available."""
+import json,os,signal,subprocess,time
+from pathlib import Path
+root=Path('/run/trona-video');root.mkdir(mode=0o755,exist_ok=True)
+ready=root/'ready.json';ready.unlink(missing_ok=True)
+result={'ready':False,'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip()}
+try:
+ if Path('/etc/trona-video-disabled').exists():raise RuntimeError('disabled by administrator')
+ assert b'amazon,trona\0' in Path('/sys/firmware/devicetree/base/compatible').read_bytes()
+ assert os.uname().release=='6.18.56-trona-arch14'
+ subprocess.run(['modprobe','mtk_vcodec_dec'],check=True,timeout=10)
+ for _ in range(60):
+  if (Path('/sys/module/trona_vdec_proxy/parameters/clock_active').exists()
+      and Path('/sys/class/remoteproc/remoteproc0/state').read_text().strip()=='running'):break
+  time.sleep(.25)
+ else:raise RuntimeError('decoder firmware unavailable')
+ # Require VA surfaces and a hardware download: a silently software-decoded
+ # frame cannot pass this command. No network or user media is accessed.
+ cmd=['runuser','-u','trona','--','env','LIBVA_DRIVER_NAME=v4l2stateless',
+      'LIBVA_DRIVERS_PATH=/usr/lib/trona-video',
+      'V4L2SL_DISABLE_CODECS=hevc,av1,vp8,mpeg2,jpeg,vpp',
+      'ffmpeg','-v','error','-hwaccel','vaapi','-hwaccel_device','/dev/dri/renderD128',
+      '-hwaccel_output_format','vaapi','-i','/usr/share/trona-video/selftest.mp4',
+      '-vf','hwdownload,format=nv12','-an','-f','hash','-hash','sha256','-']
+ p=subprocess.Popen(cmd,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                    text=True,start_new_session=True)
+ try:output,errors=p.communicate(timeout=15)
+ except subprocess.TimeoutExpired:
+  os.killpg(p.pid,signal.SIGKILL)
+  p.communicate(timeout=3)
+  raise RuntimeError('hardware self-test timed out')
+ if p.returncode:raise RuntimeError('hardware self-test failed: '+str(p.returncode))
+ expected=Path('/usr/share/trona-video/selftest.sha256').read_text().strip()
+ if output.strip()!='SHA256='+expected:raise RuntimeError('decoded frames differ')
+ if Path('/sys/module/trona_vdec_proxy/parameters/errors').read_text().strip()!='0':
+  raise RuntimeError('proxy reported an invalid request')
+ result.update(ready=True,codec='h264',decoded_sha256=expected)
+except Exception as e:
+ result['reason']=str(e)
+(root/'status.json').write_text(json.dumps(result,indent=2)+'\n')
+if result['ready']:
+ tmp=root/'ready.tmp';tmp.write_text(json.dumps(result)+'\n');tmp.chmod(0o644);tmp.replace(ready)
+print(json.dumps(result),flush=True)

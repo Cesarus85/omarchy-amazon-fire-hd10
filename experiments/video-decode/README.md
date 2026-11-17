@@ -3,8 +3,10 @@
 The original unmodified-SCP experiment failed. The later
 [decoder-only SCP proxy](scp-proxy/README.md) **produces byte-exact H.264 output
 and works in an isolated Chrome profile**. It is still a developer experiment:
-standby, long-running playback and permanent integration are unqualified.
-Normal installer/package builds remain unchanged. See [results](../../docs/video-decoding.md).
+the broader range of streams and long-term behavior still need qualification.
+An [optional guarded integration](integration/README.md) now passes browser
+hardware/software selection and one physical standby/unlock test on the reference
+tablet. The normal installer does not enable it. See [results](../../docs/video-decoding.md).
 
 The 2026-11-17 follow-up found a reproducible DEVAPC-denied write to
 `0x16000000` during H.264 initialization. [read-access-state.py](read-access-state.py)

@@ -1,0 +1,36 @@
+#!/usr/bin/python3
+"""Select the tested H.264 backend only after this boot's successful self-test."""
+import json, os
+from pathlib import Path
+
+def enabled():
+ if os.environ.get('TRONA_VIDEO')=='software':return False
+ try:
+  p=Path('/run/trona-video/ready.json')
+  if p.stat().st_uid!=0 or p.stat().st_mode & 0o022:return False
+  data=json.loads(p.read_text())
+  if not isinstance(data,dict):return False
+  return (data.get('boot_id')==Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+          and Path('/sys/module/trona_vdec_proxy/parameters/clock_active').read_text().strip()=='Y'
+          and Path('/sys/module/trona_vdec_proxy/parameters/errors').read_text().strip()=='0'
+          and Path('/sys/class/remoteproc/remoteproc0/state').read_text().strip()=='running')
+ except (OSError,ValueError):return False
+
+def arguments(args):
+ features=['AcceleratedVideoDecodeLinuxGL']
+ result=[]
+ for arg in args:
+  if arg.startswith('--enable-features='):features.extend(arg.split('=',1)[1].split(','))
+  else:result.append(arg)
+ return [*result,'--enable-features='+','.join(dict.fromkeys(features))]
+
+if __name__=='__main__':
+ import sys
+ args=sys.argv[1:]
+ if os.environ.get('TRONA_VIDEO')=='software':args.append('--disable-accelerated-video-decode')
+ if enabled():
+  os.environ.update(LIBVA_DRIVER_NAME='v4l2stateless',
+                    LIBVA_DRIVERS_PATH='/usr/lib/trona-video',
+                    V4L2SL_DISABLE_CODECS='hevc,av1,vp8,mpeg2,jpeg,vpp')
+  args=arguments(args)
+ os.execv('/opt/google/chrome/google-chrome',['/opt/google/chrome/google-chrome',*args])

@@ -8,6 +8,28 @@ UDC=pathlib.Path('/sys/kernel/config/usb_gadget/trona_probe/UDC')
 SOCK=R/'control.sock'
 EVENT=struct.Struct('llHHi')
 BT_UNITS=['bluetooth.service','trona-bluetooth.service']
+TOUCH_DRIVER=pathlib.Path('/sys/bus/i2c/drivers/edt_ft5x06')
+TOUCH_DEVICE=pathlib.Path('/sys/bus/i2c/devices/0-0038')
+
+def reset_touch():
+ # FT8201 occasionally failed to provide usable input after a full sleep.
+ # Rebinding restored it on the reference board. Keep this board-specific;
+ # a USB-powered screen blank does not require any reset.
+ if b'amazon,trona\0' not in pathlib.Path('/sys/firmware/devicetree/base/compatible').read_bytes():
+  raise RuntimeError('Touch recovery requires Trona')
+ if b'focaltech,ft8201\0' not in (TOUCH_DEVICE/'of_node/compatible').read_bytes():
+  raise RuntimeError('Unexpected touch controller')
+ driver=TOUCH_DEVICE/'driver'
+ if driver.exists():
+  if driver.resolve()!=TOUCH_DRIVER.resolve():raise RuntimeError('Unexpected touch driver')
+  (TOUCH_DRIVER/'unbind').write_text('0-0038')
+ # A previous interrupted recovery may already have unbound the device.
+ if not driver.exists():(TOUCH_DRIVER/'bind').write_text('0-0038')
+ for _ in range(40):
+  if driver.exists() and list(TOUCH_DEVICE.glob('input/input*/event*')):
+   report('touch_reinitialized');return
+  time.sleep(.05)
+ raise RuntimeError('Touch input did not return after reset')
 
 def run(*args,check=True,timeout=35):
  p=subprocess.run(args,capture_output=True,text=True,timeout=timeout)
@@ -30,6 +52,7 @@ def recover():
  actions=[]
  for cpu in sorted(s.get('offline_cpus',[])):
   actions.append(lambda cpu=cpu:pathlib.Path(f'/sys/devices/system/cpu/cpu{cpu}/online').write_text('1'))
+ if s.get('touch_reset'):actions.append(reset_touch)
  if s.get('udc') and not UDC.read_text().strip():actions.append(lambda:UDC.write_text(s['udc']))
  if 'pm_async' in s:actions.append(lambda:pathlib.Path('/sys/power/pm_async').write_text(s['pm_async']))
  if s.get('masked'):actions.append(lambda:run('systemctl','unmask','--runtime',*s['masked']))
@@ -44,7 +67,7 @@ def recover():
   try:a()
   except Exception as e:errors.append(str(e));report('restore_error',error=str(e))
  if errors:raise RuntimeError('Standby restoration incomplete')
- s.update(state='awake',udc='',masked=[],wifi=False,bt_module=False,bt_units=[],offline_cpus=[])
+ s.update(state='awake',udc='',masked=[],wifi=False,bt_module=False,bt_units=[],offline_cpus=[],touch_reset=False)
  save(s)
 
 class Standby:
@@ -108,12 +131,17 @@ class Standby:
     for cpu in reversed(s['offline_cpus']):pathlib.Path(f'/sys/devices/system/cpu/cpu{cpu}/online').write_text('0')
     if pathlib.Path('/sys/devices/system/cpu/online').read_text().strip()!='0':raise RuntimeError('Secondary CPU power-down incomplete')
    pathlib.Path('/sys/power/wakeup_count').write_text(count)
+   s['touch_reset']=True;save(s)
    report('sleep_enter',mode='s2idle',offline_cpus=s.get('offline_cpus',[]));start=time.time()
    pathlib.Path('/sys/power/state').write_text('freeze')
    report('sleep_return',seconds=time.time()-start)
   except Exception as e:report('sleep_aborted',error=str(e))
   finally:
    recover();self.blank=False;self.last=time.monotonic();self.ignore_power_until=self.last+1
+   # Rebinding replaces the event device, possibly reusing the same pathname.
+   for fd,(_,name) in list(self.inputs.items()):
+    if 'ft5x06' in name:os.close(fd);del self.inputs[fd]
+   self.scan_inputs()
    # Discard the press/release that woke the kernel, without logging input data.
    for fd in list(self.inputs):
     try:

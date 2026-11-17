@@ -1,21 +1,92 @@
 # Video decoding investigation — updated 2026-11-17
 
-**H.264 now works in an isolated experiment; normal builds still leave hardware
-decoding disabled.** A decoder-only Linux MMIO proxy resolves the SCP access
+**H.264 now works through an optional guarded browser integration on the reference
+tablet; normal installer builds still leave hardware decoding disabled.** A decoder-only Linux MMIO proxy resolves the SCP access
 failure without changing secure-firmware permissions. Hardware output matched
 software decoding byte for byte at 480p and 1080p. An isolated Chrome profile
 used `VaapiVideoDecoder` and reduced measured Chrome-plus-proxy CPU time by about
-35% in one short comparison. This is not yet a qualified everyday feature.
+35% in one short comparison. Wider stream coverage and long-term use still need
+qualification; other codecs are not enabled.
 
-After the experiment, the reference tablet was returned to its previously
-qualified arch14 boot image. No browser flags, sandbox exceptions, experimental
-firmware or services were installed permanently. General performance and tablet
-usability work remains tracked in the [roadmap](roadmap.md).
+The latest reference-tablet candidate installs an optional guarded browser
+integration; the ordinary installer still leaves it disabled. Its boot self-test,
+browser hardware/software selection, and a physical resume test with the new
+touch recovery pass. No browser sandbox is disabled. General
+performance and tablet usability work remains tracked in the [roadmap](roadmap.md).
 
 The [proxy evidence](evidence/video-proxy-2026-11-17.json) records successful
 decoding and restoration checks. The earlier [initial measurements](evidence/video-decoding-2026-11-16.json)
 and [access-denial evidence](evidence/video-decoding-2026-11-17.json) remain as
 historical stages, not the latest decoding result.
+
+## Installed integration candidate
+
+The [optional payload and build helpers](../experiments/video-decode/integration/README.md)
+are installed on the reference tablet as platform `2026.11.17-2`. The kernel
+executable is unchanged. The appended DT reserves the SCP memory and selects a
+separately named patched firmware file. The original distribution firmware is
+preserved. A symbol dependency now prevents unloading the proxy while SCP is
+loaded; the kernel rejected a deliberate unload attempt as expected.
+
+A boot self-test decoded 60 VGA frames using VA surfaces and checked their
+complete NV12 hash against software. Only then did it enable the guarded Chrome
+launcher. Without any extra test-only VA environment or decoder flag, Chrome
+selected `VaapiVideoDecoder` and advanced 601 frames with zero additional drops
+over 20 seconds. With readiness deliberately disabled, a fresh Chrome process
+selected `FFmpegVideoDecoder`, advancing 602 frames with zero additional drops.
+Restoring the service passed the hardware self-test again. These checks ran
+behind the authenticated startup screen and do not establish visible playback
+quality or foreground performance.
+
+The package also adds board-specific touch reinitialization after actual sleep
+and balances the front-camera sensor's system/runtime power transitions. The
+first intermittent touch failure from the earlier experiment has not been
+explained. With the new recovery, the owner confirmed touch unlocking, normal
+menu response and continued video after a 24-second sleep. The log confirms
+touch reinitialization, zero proxy errors and continued `VaapiVideoDecoder`
+playback. The old camera clock/regulator warnings did not recur in that cycle.
+An active camera stream across sleep remains untested.
+The final reboot passed the automatic hardware self-test again, and the owner
+confirmed touch login and a usable desktop afterward. No system services failed;
+the existing 1989-MHz CPU limits are unchanged.
+Package integrity passed with 205 entries and no altered files. The source-only
+DT rebuild reproduced the installed candidate DT exactly. See the
+[integration evidence](evidence/video-integration-2026-11-17.json).
+
+## Extended qualification — still experimental
+
+A subsequent run compared the complete NV12 output of a 900-frame 1080p High
+stream and a 60-frame 480p stream with software: both hashes matched. Four seek
+positions and two concurrent decoder clients also matched software references.
+Reopening after these tests succeeded. A corrupted synthetic sample followed by
+a valid sample did not prevent subsequent decoding; this is not comprehensive
+malformed-input testing.
+
+An isolated Chrome profile ran the 1080p30 clip for two minutes, followed by six
+seeks and four reopen operations. It reported `VaapiVideoDecoder` without media
+errors. Between the 10-second and 120-second snapshots, 87 of 3294 reported
+frames were dropped (about 2.6%). This longer sample is not a zero-drop result
+or a comparable software/hardware performance measurement.
+
+The experimental worker now enters the kernel freezer and releases its SCP
+clock reference only after the mailbox is idle. It reacquires the clock before
+accessing TCM again. A freezer-only test and two physical s2idle cycles resumed
+hardware playback. However, the owner could not use Touch after the first cycle;
+rebinding `edt_ft5x06` restored it. One subsequent cycle without the decoder and
+one with it allowed touch unlocking. The owner reported possibly slower input
+on the latter. A hands-off check then reported zero active contacts in all five
+samples; stuck contacts were not established in that state. The first failure
+remains unexplained, so the complete standby gate has **not** passed.
+
+Front-camera clock/regulator warnings also occurred with the decoder unloaded.
+Their presence alone does not implicate the video proxy. The reported web
+failure was separately clarified by the owner: Wi-Fi had not been connected.
+The test browser closes itself ten seconds after the observed resume, so its
+absence afterward does not by itself indicate a playback failure.
+
+Normal browser configuration and installer integration remain unchanged. Keep
+the prototype opt-in until the intermittent input failure, camera PM warnings,
+repeat boots, teardown ordering, and automatic software fallback are qualified.
 
 ## Working decoder proxy — 2026-11-17
 
@@ -84,15 +155,16 @@ There was no new human visual acceptance test.
 
 ### Before permanent enablement
 
-The prototype has no qualified suspend/resume lifecycle and retains an SCP main
-clock reference while loaded. Stopping its worker while the patched firmware
+The prototype has no fully qualified suspend/resume lifecycle. The extended
+test worker releases its SCP clock reference while frozen; earlier tests kept
+it held throughout. Stopping its worker while the patched firmware
 still needs it is unsafe for playback. Early development iterations triggered
 SCP watchdogs; only the corrected cold-start version passed the tests above.
 The handler is pinned to one firmware image and a limited set of Thumb word
 access instructions, not a general-purpose emulator or a new security boundary.
 
-Next qualify repeated cold starts, long clips, seeking, concurrent clients,
-malformed streams, clean teardown and standby/wake, then integrate lifecycle,
+Next qualify repeated cold starts, a wider range of real streams and malformed
+inputs, clean teardown and reliable standby/wake, then integrate lifecycle,
 package/update protection and browser fallback. Review firmware/bridge licensing
 before distributing binaries. VP9, HEVC, AV1, protected playback and all other
 codecs remain unqualified. The normal kernel configuration, device tree, platform

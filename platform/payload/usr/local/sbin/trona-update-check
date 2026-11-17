@@ -78,6 +78,8 @@ def repair_user():
 def repair():
  for command in [['trona-touch-panels'],['trona-lock-bar','--patch-only'],['trona-bluetooth-menu'],['trona-fix-app-grid'],['trona-fast-apps'],['trona-patch-lock']]:
   subprocess.run(['/usr/local/sbin/'+command[0],*command[1:]],check=True)
+ if Path('/usr/local/sbin/trona-video-browser').is_file():
+  subprocess.run(['/usr/local/sbin/trona-video-browser'],check=True)
  p=Path('/usr/bin/omarchy-update-boot');atomic(p,patch_boot(p.read_text()))
  p=Path('/usr/bin/omarchy-update-aur-pkgs');s=p.read_text()
  old='--ignore gcc14,gcc14-libs'
@@ -98,6 +100,9 @@ def repair():
  # Don't let upstream logind handling race the tablet's Power-button daemon.
  atomic('/etc/systemd/logind.conf.d/99-trona-power-button.conf','[Login]\nHandlePowerKey=ignore\nHandlePowerKeyLongPress=ignore\n')
 def integration_check():
+ if Path('/usr/local/sbin/trona-video-browser').is_file():
+  if 'exec /usr/local/libexec/trona-chrome-video $CHROME_USER_FLAGS "$@"' not in Path('/usr/bin/google-chrome-stable').read_text():
+   fail('Guarded Chrome video launcher missing')
  if Path('/etc/sudoers.d/trona-bringup').exists():fail('Legacy passwordless administrator access returned')
  if Path('/etc/systemd/system/serial-getty@ttyGS0.service.d/autologin.conf').exists():fail('Legacy serial autologin returned')
  checks={

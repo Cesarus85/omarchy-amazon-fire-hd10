@@ -1,0 +1,89 @@
+--- a/drivers/gpu/drm/sysfb/drm_sysfb_modeset.c
++++ b/drivers/gpu/drm/sysfb/drm_sysfb_modeset.c
+@@ -1,6 +1,10 @@
+ // SPDX-License-Identifier: GPL-2.0-only
+ 
+ #include <linux/export.h>
++#include <linux/io.h>
++#include <linux/of.h>
++#include <linux/moduleparam.h>
++#include <linux/unaligned.h>
+ #include <linux/slab.h>
+ 
+ #include <drm/drm_atomic.h>
+@@ -229,6 +233,55 @@
+ }
+ EXPORT_SYMBOL(drm_sysfb_plane_helper_atomic_check);
+ 
++/* Trona's inherited OVL0 consumes ARGB with alpha blending enabled.
++ * Write opaque little-endian pixels to its WC framebuffer in one pass.
++ * The generic conversion remains available for comparison and fallback.
++ */
++static bool trona_opaque_blit;
++module_param(trona_opaque_blit, bool, 0600);
++
++static noinline void trona_copy_opaque(void __iomem *dst, unsigned int dst_pitch,
++				      const void *src, unsigned int src_pitch,
++				      unsigned int width, unsigned int height)
++{
++	const u64 alpha = 0xff000000ff000000ULL;
++
++	while (height--) {
++		void __iomem *out = dst;
++		const u8 *in = src;
++		unsigned int n = width;
++
++		if (n && ((unsigned long)out & 7)) {
++			writel_relaxed(get_unaligned_le32(in) | 0xff000000, out);
++			in += 4;
++			out += 4;
++			n--;
++		}
++		while (n >= 8) {
++			u64 a = get_unaligned_le64(in) | alpha;
++			u64 b = get_unaligned_le64(in + 8) | alpha;
++			u64 c = get_unaligned_le64(in + 16) | alpha;
++			u64 d = get_unaligned_le64(in + 24) | alpha;
++
++			writeq_relaxed(a, out);
++			writeq_relaxed(b, out + 8);
++			writeq_relaxed(c, out + 16);
++			writeq_relaxed(d, out + 24);
++			in += 32;
++			out += 32;
++			n -= 8;
++		}
++		while (n--) {
++			writel_relaxed(get_unaligned_le32(in) | 0xff000000, out);
++			out += 4;
++			in += 4;
++		}
++		src += src_pitch;
++		dst += dst_pitch;
++	}
++	wmb();
++}
++
+ void drm_sysfb_plane_helper_atomic_update(struct drm_plane *plane, struct drm_atomic_state *state)
+ {
+ 	struct drm_device *dev = plane->dev;
+@@ -261,6 +314,19 @@
+ 			continue;
+ 
+ 		iosys_map_incr(&dst, drm_fb_clip_offset(dst_pitch, dst_format, &dst_clip));
++		if (READ_ONCE(trona_opaque_blit) && dst.is_iomem &&
++		    !shadow_plane_state->data[0].is_iomem &&
++		    fb->format->format == DRM_FORMAT_XRGB8888 &&
++		    dst_format->format == DRM_FORMAT_ARGB8888 &&
++		    !((unsigned long)dst.vaddr_iomem & 3) && !(dst_pitch & 3) &&
++		    of_machine_is_compatible("amazon,trona")) {
++			const u8 *src = shadow_plane_state->data[0].vaddr;
++
++			src += drm_fb_clip_offset(fb->pitches[0], fb->format, &damage);
++			trona_copy_opaque(dst.vaddr_iomem, dst_pitch, src, fb->pitches[0],
++					  drm_rect_width(&damage), drm_rect_height(&damage));
++			continue;
++		}
+ 		drm_fb_blit(&dst, &dst_pitch, dst_format->format, shadow_plane_state->data, fb,
+ 			    &damage, &shadow_plane_state->fmtcnv_state);
+ 	}

@@ -129,3 +129,5 @@ with CPU/SRAM voltage tracking and CCI scaling. The GPU already exposes an
 2 GHz is a rated maximum, not a constant operating frequency. About 60% more
 clock does not imply 60% faster apps. The original performance/bar-layout work
 used arch12; the later [DVFS qualification](cpu-dvfs.md) reports separate results.
+
+The reference tablet now has a [measured single-pass display copy](../experiments/display-blit/README.md) for the bootloader framebuffer. The comparison uses the same arch14 kernel for both modes.

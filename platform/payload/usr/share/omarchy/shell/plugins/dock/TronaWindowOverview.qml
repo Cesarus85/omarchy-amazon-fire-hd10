@@ -10,17 +10,33 @@ PanelWindow {
   property bool opened: false
   property string appKey: ""
   function open(key) {
+    focusAfterClose.stop()
     appKey = key
     opened = true
     grid.positionViewAtBeginning()
   }
   function dismiss() { opened = false }
   function choose(address, handle) {
-    // Resolve the current window again in case one closed during the gesture.
+    // Unmap the exclusive layer before Hyprland raises the chosen client.
+    focusAfterClose.address = address
+    focusAfterClose.handle = handle
+    dismiss()
+    focusAfterClose.restart()
+  }
+  Timer {
+    id: focusAfterClose
+    property string address: ""
+    property var handle: null
+    interval: 120
+    onTriggered: {
+      overview.focusCurrentWindow(address, handle)
+      handle = null
+    }
+  }
+  function focusCurrentWindow(address, handle) {
     for (const item of dock.items) {
       for (const win of item.windows) {
         if (win.address !== address || !handle || win.toplevel !== handle) continue
-        dismiss()
         dock.bringForward(win)
         return
       }

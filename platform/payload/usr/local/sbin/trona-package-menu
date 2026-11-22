@@ -1,0 +1,21 @@
+#!/usr/bin/python3
+"""Point only the repository package menu entry at the touch picker."""
+from pathlib import Path
+import shutil
+
+path = Path('/usr/share/omarchy/default/omarchy/omarchy-menu.jsonc')
+lines = path.read_text().splitlines(keepends=True)
+original = '"action":"xdg-terminal-exec --app-id=org.omarchy.terminal omarchy-pkg-install"'
+target = '"action":"/usr/local/bin/trona-package-picker"'
+indexes = [i for i, line in enumerate(lines) if line.lstrip().startswith('"install.package":')]
+if len(indexes) != 1:
+    raise SystemExit('Unknown Omarchy package menu')
+i = indexes[0]
+if target not in lines[i]:
+    if lines[i].count(original) != 1:
+        raise SystemExit('Unknown Omarchy package menu action')
+    lines[i] = lines[i].replace(original, target)
+    tmp = path.with_suffix('.trona.tmp')
+    tmp.write_text(''.join(lines))
+    shutil.copymode(path, tmp)
+    tmp.replace(path)

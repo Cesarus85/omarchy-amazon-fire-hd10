@@ -1,6 +1,6 @@
 pkgname=trona-platform
 pkgver=2026.11.22
-pkgrel=5
+pkgrel=6
 pkgdesc='Amazon Fire HD10 Trona native kernel modules, tablet integration and update guards'
 arch=('aarch64')
 license=('custom')
@@ -12,11 +12,14 @@ makedepends=('gcc' 'pkgconf')
 build() {
   cc $CPPFLAGS $CFLAGS "$startdir/trona-launch-desktop.c" $LDFLAGS \
     $(pkg-config --cflags --libs gdk-3.0 gio-unix-2.0) -o "$srcdir/trona-launch-desktop"
+  cc $CPPFLAGS $CFLAGS -fPIC -shared "$startdir/trona-filechooser.c" $LDFLAGS \
+    $(pkg-config --cflags --libs gtk+-3.0) -o "$srcdir/trona-filechooser.so"
 }
 
 package() {
   cp -a "$startdir/payload/." "$pkgdir/"
   install -Dm755 "$srcdir/trona-launch-desktop" "$pkgdir/usr/local/libexec/trona-launch-desktop"
+  install -Dm755 "$srcdir/trona-filechooser.so" "$pkgdir/usr/lib/trona-platform/trona-filechooser.so"
   python - "$pkgdir" <<'PYTHON'
 from pathlib import Path
 import hashlib, json, sys
@@ -24,8 +27,8 @@ import hashlib, json, sys
 root = Path(sys.argv[1])
 manifest = root / "usr/share/trona-platform/files.json"
 files = json.loads(manifest.read_text())
-launcher = "usr/local/libexec/trona-launch-desktop"
-files[launcher] = {"sha256": hashlib.sha256((root / launcher).read_bytes()).hexdigest()}
+for artifact in ("usr/local/libexec/trona-launch-desktop", "usr/lib/trona-platform/trona-filechooser.so"):
+    files[artifact] = {"sha256": hashlib.sha256((root / artifact).read_bytes()).hexdigest()}
 manifest.write_text(json.dumps(files, indent=2) + "\n")
 PYTHON
   chown -R root:root "$pkgdir"

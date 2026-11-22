@@ -105,3 +105,25 @@ On the Trona desktop, focusing an editable field opens the keyboard. Moving to a
 Platform 2026.11.17-5 starts a per-user listener with the graphical session. It uses AT-SPI focus events and checks whether the focused control is editable. It does not request text or keystrokes. Chrome and its web apps pick up form-control accessibility from the user's launcher flags on their next full launch. Existing explicit Chromium accessibility flags take precedence. Apps without editable accessibility controls can use the manual button. The session lock has its own keyboard.
 
 On the reference tablet, the owner confirmed all four steps by touch in Chrome. Tapping the first field opened the keyboard. Hiding it with the top-bar button kept it hidden in that field. Tapping the second field reopened it, and tapping “Fertig” hid it again.
+
+## Portrait dialogs with the screen keyboard
+
+Platform **2026.11.22-6** adds a touch picker to **Install → Package**. Type part of
+a package name, tap a row to select or deselect it, and use **Paketdetails** to
+inspect the highlighted package. Selections survive a new search. The results
+and details scroll independently of the **Abbrechen** and **Installieren**
+buttons. Installieren passes the selected names to pacman in an Omarchy terminal
+with the usual sudo prompt.
+
+**Datei öffnen** and **Speichern unter** use the desktop's GTK file portal in
+Chrome and other portal clients. The confirm and cancel buttons stay in the
+header. Long names fit in the editable field by scrolling the text. If the
+file columns exceed the available width, they can scroll horizontally. The GTK
+module is loaded by the file portal's user service. Apps that draw their own
+file dialogs control their own layout.
+
+To check a build on the tablet, open the keyboard in portrait, select a test
+file, then save a new file in a temporary folder. Repeat both dialogs with
+**Abbrechen**. In the package picker, filter the list, select two packages,
+expand the details and cancel. This exercises the touch layout without
+installing software.

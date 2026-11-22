@@ -89,7 +89,7 @@ def patch_browser_handoff(text):
 
 def repair():
  p=Path('/usr/bin/omarchy-cmd-browser-handoff');atomic(p,patch_browser_handoff(p.read_text()))
- for command in [['trona-touch-panels'],['trona-lock-bar','--patch-only'],['trona-bluetooth-menu'],['trona-fix-app-grid'],['trona-fast-apps'],['trona-patch-lock']]:
+ for command in [['trona-touch-panels'],['trona-lock-bar','--patch-only'],['trona-bluetooth-menu'],['trona-fix-app-grid'],['trona-fast-apps'],['trona-package-menu'],['trona-patch-lock']]:
   subprocess.run(['/usr/local/sbin/'+command[0],*command[1:]],check=True)
  if Path('/usr/local/sbin/trona-video-browser').is_file():
   subprocess.run(['/usr/local/sbin/trona-video-browser'],check=True)
@@ -119,6 +119,7 @@ def integration_check():
  if Path('/etc/sudoers.d/trona-bringup').exists():fail('Legacy passwordless administrator access returned')
  if Path('/etc/systemd/system/serial-getty@ttyGS0.service.d/autologin.conf').exists():fail('Legacy serial autologin returned')
  checks={
+ '/usr/share/omarchy/default/omarchy/omarchy-menu.jsonc':'"action":"/usr/local/bin/trona-package-picker"',
  '/usr/bin/omarchy-cmd-browser-handoff':'|--no-first-run|--force-renderer-accessibility=form-controls',
  '/usr/share/omarchy/shell/services/AppLibrary.qml':'// Trona desktop entry launch v2',
  '/usr/share/omarchy/shell/plugins/dock/DockWindow.qml':'// Trona dock hold and dismiss v1',

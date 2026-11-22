@@ -106,3 +106,8 @@ and hidden. Tests also used an editable GTK field to open the keyboard
 automatically, checked backlight and audio changes against their device
 values, and verified that the Wi-Fi and Bluetooth tiles opened their
 existing panels. Screenshots of the two layouts were checked on this device.
+
+On November 22, 2026, the tablet owner also tested the top-right swipe by
+hand and rotated the tablet with the control center and keyboard open.
+They confirmed the swipe was comfortable and the sliders and keyboard
+remained within reach in both orientations.

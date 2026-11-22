@@ -23,7 +23,37 @@ if 'readonly property bool layoutLocked:' not in source:
     for old, new in changes:
         assert source.count(old) == 1, old
         source = source.replace(old, new)
-    bar.write_text(source)
+# Keep the underlying Omarchy widgets alive for their native panels and services.
+slot = '    readonly property bool removalPending: root.isPendingRemoval(widgetKey)'
+controls = """
+        TronaControlCenter {
+          bar: root
+          fullscreen: barWindow.underFullscreen
+          display: barWindow.screen
+          anchors.right: parent.right
+          anchors.top: parent.top
+          anchors.bottom: parent.bottom
+          width: rightModules.width + rightModules.anchors.rightMargin
+          visible: barWindow.screen?.name === "DSI-1" && root.position === "top"
+          z: 5
+        }
+
+"""
+start = '        RightModules {\n          window: barWindow\n          pool: horizontalPool'
+hidden = """    visible: !(slot.window?.screen?.name === "DSI-1" && root.position === "top"
+      && ["trona.autorotate", "omarchy.audio", "omarchy.monitor"].includes(moduleName))
+"""
+for old, new in [(start, controls + start), (slot, hidden + slot)]:
+    if new in source:
+        continue
+    if source.count(old) != 1:
+        raise SystemExit('Tablet control center: unsupported bar layout')
+    source = source.replace(old, new)
+if source != bar.read_text():
+    temporary = bar.with_suffix('.qml.trona-tmp')
+    temporary.write_text(source)
+    shutil.copymode(bar, temporary)
+    temporary.replace(bar)
 if '--patch-only' in sys.argv:
     print('Tablet bar layout lock applied; user configuration retained.')
     raise SystemExit(0)

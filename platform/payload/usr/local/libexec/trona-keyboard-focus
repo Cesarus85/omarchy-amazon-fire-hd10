@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 """Follow desktop text focus. Only query control state and identity."""
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -37,6 +38,7 @@ class FocusKeyboard:
         self.window = None
         self.applied = None
         self.timer = 0
+        self.panel_socket = None
         self.changed_at = 0
         self.listener = Atspi.EventListener.new(self.event, None)
         for kind in ("object:state-changed:focused", "window:deactivate", "window:destroy"):
@@ -79,6 +81,47 @@ class FocusKeyboard:
             if event.source == self.field:
                 self.set_field(None)
 
+    def wait_for_panel_close(self):
+        if self.panel_socket is not None:
+            return
+        paths = list((Path(os.environ["XDG_RUNTIME_DIR"]) / "hypr").glob("*/.socket2.sock"))
+        listener = socket.socket(socket.AF_UNIX)
+        try:
+            if len(paths) != 1:
+                raise OSError("No unique compositor event socket")
+            listener.connect(str(paths[0]))
+            listener.setblocking(False)
+        except OSError:
+            listener.close()
+            self.timer = GLib.timeout_add(1000, self.apply)
+            return
+        self.panel_socket = listener
+        pending = b""
+
+        def compositor_event(fd, condition):
+            nonlocal pending
+            try:
+                chunk = listener.recv(16384)
+            except BlockingIOError:
+                return True
+            except OSError:
+                chunk = b""
+            lines = (pending + chunk).split(b"\n")
+            pending = lines.pop()
+            if chunk and b"closelayer>>trona-control-center" not in lines:
+                return True
+            listener.close()
+            self.panel_socket = None
+            # Allow the editor to regain focus before applying a deferred hide.
+            if not self.timer:
+                self.timer = GLib.timeout_add(320, self.apply)
+            return False
+
+        GLib.io_add_watch(listener.fileno(), GLib.PRIORITY_DEFAULT,
+                          GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR, compositor_event)
+        # Recheck after subscribing in case the layer just closed.
+        self.timer = GLib.idle_add(self.apply)
+
     def apply(self):
         self.timer = 0
         if self.field == self.applied:
@@ -88,6 +131,8 @@ class FocusKeyboard:
                                 stdout=subprocess.DEVNULL)
         if result.returncode == 75:
             self.timer = GLib.timeout_add(200, self.apply)
+        elif result.returncode == 76:
+            self.wait_for_panel_close()
         elif result.returncode == 0:
             self.applied = self.field
         return False

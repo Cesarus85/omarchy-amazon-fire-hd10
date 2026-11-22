@@ -13,7 +13,7 @@ user's `~/.config/omarchy/shell.json`:
 - Empty center groups, so the clock no longer sits in the path of the left group.
 - Short rotation label `↻`; automatic-rotation state remains readable.
 - Both clock display formats stay `HH:mm` to prevent an alternate long date
-  from expanding the bar. The calendar remains available by tapping the clock.
+  from expanding the bar. On the tablet the status group opens the control center.
 - World clocks, weather, tray, agents, VPN and other extras are omitted from the
   visible bar. Their widget configurations remain in `bar.tronaCompactHidden`
   for later customization; they are not placed in a hover-only overflow drawer.
@@ -42,6 +42,10 @@ large font or many additional custom widgets still requires layout adjustment.
 To customize later, edit `bar.layout` or use Omarchy's normal bar tools. An omitted
 widget can be moved from `bar.tronaCompactHidden` into a visible section. Keep
 `bar.locked=true` for touch use.
+
+The control center keeps the configured rotation-lock, audio and brightness
+widgets available to the shell and hides their individual bar slots on the built-in
+display. The remaining status icons share the control-center touch target.
 
 ## Touch controls in the app dock
 
@@ -72,3 +76,33 @@ fullscreen app can use the entire screen. When the row fills up, swipe the
 app icons sideways. On the screen keyboard, **Super**, **Alt**, then **W**
 also closes the active window. On a hardware keyboard, hold both modifiers
 while pressing W.
+
+## Tablet control center
+
+Tap the status group around the clock and battery, or swipe down from the top
+right of the built-in screen. In fullscreen the swipe starts in the top seven
+logical pixels of the rightmost 100 pixels. Scrolling started inside an app
+continues to go to the app.
+
+The brightness and volume sliders use the same controls as the Omarchy panels.
+The Wi-Fi and Bluetooth tiles show the current connection and open the native
+device lists. The rotation lock tile switches automatic rotation. The manual
+rotate button and the on-screen keyboard button remain in the bar.
+
+Tap outside the card, tap its close button, press Escape, or swipe up on the
+card to dismiss it. In very short work areas the card scrolls to keep every
+control reachable. The panel uses available space above the keyboard and dock.
+Its width follows the screen in portrait and is capped at 410 logical pixels
+in landscape. The platform update hook restores the bar integration.
+
+When a text field has opened the keyboard automatically, temporary focus in
+the control center keeps that keyboard in place. After dismissal, focus in
+the app determines whether it stays visible. The keyboard focus listener
+waits for Hyprland's layer-close event while a hide is deferred.
+
+On the reference Fire HD 10, virtual touchscreen taps and drags exercised
+the installed bar in portrait and landscape, each with the keyboard shown
+and hidden. Tests also used an editable GTK field to open the keyboard
+automatically, checked backlight and audio changes against their device
+values, and verified that the Wi-Fi and Bluetooth tiles opened their
+existing panels. Screenshots of the two layouts were checked on this device.

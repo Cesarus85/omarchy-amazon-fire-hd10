@@ -7,9 +7,12 @@ def command(*args):
     if p.returncode:raise RuntimeError(p.stderr.strip() or p.stdout.strip() or args[0])
     return p.stdout
 
-def visible():
+def layer_names():
     data=json.loads(command('/usr/bin/hyprctl','-i','0','-j','layers'))
-    return any(x['namespace']=='wlroots' for g in data.get('DSI-1',{}).get('levels',{}).values() for x in g)
+    return {layer['namespace'] for group in data.get('DSI-1',{}).get('levels',{}).values() for layer in group}
+
+def visible():
+    return 'wlroots' in layer_names()
 
 def main():
     if os.getuid()==0:raise RuntimeError('Run as the desktop user')
@@ -28,7 +31,11 @@ def main():
             fcntl.flock(lock, mode)
         except BlockingIOError:
             raise SystemExit(75)
-        old=visible()
+        layers=layer_names()
+        old='wlroots' in layers
+        if action=='auto-hide' and old and 'trona-control-center' in layers:
+            # The temporary shell focus should preserve an editor's keyboard.
+            raise SystemExit(76)
         stamp=runtime/'trona-keyboard-control.last'
         if action=='toggle' and stamp.exists() and time.monotonic()-float(stamp.read_text())<.5:return
         if automatic and stamp.exists() and float(stamp.read_text()) >= float(sys.argv[2]):return

@@ -1,13 +1,32 @@
 pkgname=trona-platform
-pkgver=2026.11.17
-pkgrel=11
+pkgver=2026.11.22
+pkgrel=2
 pkgdesc='Amazon Fire HD10 Trona native kernel modules, tablet integration and update guards'
 arch=('aarch64')
 license=('custom')
 options=('!strip' '!debug')
 install=trona-platform.install
 depends=('yay' 'omarchy=4.5.0-3' 'omarchy-settings=4.5.0-3' 'hyprland=0.57.2-1' 'quickshell=0.3.2.r7.g2b4501a-1' 'libcamera=0.7.2-4' 'libcamera-ipa=0.7.2-4' 'gst-plugin-libcamera=0.7.2-4' 'python' 'bash' 'systemd' 'kmod' 'util-linux' 'mesa' 'pipewire' 'wireplumber' 'alsa-ucm-conf' 'networkmanager' 'bluez' 'seatd' 'uwsm' 'foot' 'gtk3' 'python-gobject' 'at-spi2-core' 'gst-plugin-gtk' 'gst-plugins-base-libs' 'gst-plugins-good' 'udisks2' 'socat' 'openssh' 'wl-clipboard' 'wtype')
+makedepends=('gcc' 'pkgconf')
+
+build() {
+  cc $CPPFLAGS $CFLAGS "$startdir/trona-launch-desktop.c" $LDFLAGS \
+    $(pkg-config --cflags --libs gdk-3.0 gio-unix-2.0) -o "$srcdir/trona-launch-desktop"
+}
+
 package() {
   cp -a "$startdir/payload/." "$pkgdir/"
+  install -Dm755 "$srcdir/trona-launch-desktop" "$pkgdir/usr/local/libexec/trona-launch-desktop"
+  python - "$pkgdir" <<'PYTHON'
+from pathlib import Path
+import hashlib, json, sys
+
+root = Path(sys.argv[1])
+manifest = root / "usr/share/trona-platform/files.json"
+files = json.loads(manifest.read_text())
+launcher = "usr/local/libexec/trona-launch-desktop"
+files[launcher] = {"sha256": hashlib.sha256((root / launcher).read_bytes()).hexdigest()}
+manifest.write_text(json.dumps(files, indent=2) + "\n")
+PYTHON
   chown -R root:root "$pkgdir"
 }

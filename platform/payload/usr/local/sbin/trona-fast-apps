@@ -32,7 +32,11 @@ def patch_library(s):
       if (changed) root.iconIndex = next
     }'''),
     ]
-    return transform(s, changes)
+    s = transform(s, changes)
+    return transform(s, [
+        ('Quickshell.execDetached(["uwsm-app", "--", "gtk-launch", id + ".desktop"])',
+         'Quickshell.execDetached(["uwsm-app", "--", "/usr/local/libexec/trona-launch-desktop", id + ".desktop"])'),
+    ], '// Trona desktop entry launch v2')
 
 def patch_dock(s):
     anchor='    var target = "window = \\\"address:" + address + "\\\""'
@@ -44,7 +48,13 @@ def patch_dock(s):
       Hyprland.dispatch("hl.dsp.window.alter_zorder({ mode = \\"top\\", " + target + " })")
       return
     }'''
-    return transform(s, [(anchor,replacement)])
+    s = transform(s, [(anchor,replacement)])
+    # Changing the stack of a maximized tiled client can refocus a floating
+    # neighbor. Leave explicit focus as the last compositor operation.
+    focus = '      Hyprland.dispatch("hl.dsp.focus({ " + target + " })")'
+    raise_window = r'      Hyprland.dispatch("hl.dsp.window.alter_zorder({ mode = \"top\", " + target + " })")'
+    return transform(s, [(focus + '\n' + raise_window, raise_window + '\n' + focus)],
+                     '// Trona dock focus order v2')
 
 def patch_dock_window(s):
     button = """      TronaNavButton {

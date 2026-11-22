@@ -14,7 +14,7 @@ DOCK='    var target = "window = \\\"address:" + address + "\\\""\n'
 class FastApps(unittest.TestCase):
  def test_safe_argv_and_scope_retained(self):
   out=m.patch_library(LIB)
-  self.assertIn('["uwsm-app", "--", "gtk-launch", id + ".desktop"]',out)
+  self.assertIn('["uwsm-app", "--", "/usr/local/libexec/trona-launch-desktop", id + ".desktop"]',out)
   self.assertNotIn('Util.execDetached(',out)
   self.assertIn('if (changed) root.iconIndex = next',out)
   self.assertIn('exitCode !== 0',out)
@@ -22,7 +22,7 @@ class FastApps(unittest.TestCase):
  def test_native_focus_only_for_non_minimized_windows(self):
   out=m.patch_dock(DOCK)
   self.assertIn('if (!window.minimized)',out)
-  self.assertIn('Hyprland.dispatch(',out)
+  self.assertLess(out.index('hl.dsp.window.alter_zorder'),out.index('hl.dsp.focus'))
   self.assertEqual(out,m.patch_dock(out))
  def test_changed_second_file_leaves_first_untouched(self):
   with tempfile.TemporaryDirectory() as d:

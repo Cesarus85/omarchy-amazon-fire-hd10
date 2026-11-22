@@ -112,3 +112,38 @@ An optional Omarchy Bluetooth agent retried every two seconds when its binary
 was missing. A systemd unit condition skips this agent until the executable is
 available. On the tablet the restart counter stopped at 723, with bluetoothd
 and the Blueman applet still active.
+
+## Dock and Apps grid on November 22
+
+Platform `2026.11.22-2` uses a small GIO/GDK launcher for graphical desktop
+entries. Dock and Apps grid pass the full desktop ID as one argument inside
+the existing UWSM application scope. GLib resolves the entry and handles
+D-Bus activation or its Exec line. The GDK launch context carries display
+startup information. Terminal-only entries keep Omarchy's TUI launcher.
+
+| App | Previous gtk-launch | Installed launch path |
+|---|---:|---:|
+| Files (Nautilus) | 488 ms | 353 ms |
+| Foot via a desktop entry with spaces in its ID and display name | 402 ms | 341 ms |
+
+Each median covers six starts, three per surface. Measurements ran on the
+reference tablet with a competing window in front. Timing starts in the
+shared launcher and ends at Hyprland's window-open event. The first Files
+sample included application startup (1639 ms on the previous route). These
+figures characterize this test sequence and do not estimate cold-start
+savings. All 24 starts brought the intended window to the active workspace;
+it retained focus at the second check half a second later.
+[Individual samples](evidence/app-launch-2026-11-22.json)
+
+In the installed package, a second test used different names containing
+spaces for its desktop file and visible label. The grid launched it, then
+a simulated touch on the Files dock icon opened Nautilus in front of it.
+Returning to an already-open, maximized Files window exposed a separate
+ordering issue with a floating window. The Dock now raises the selected
+window before assigning focus. Three consecutive touch selections brought
+the same Files window back to the front.
+
+The package transaction verified the platform and the shell was restarted
+without rebooting the tablet. The update hook reapplies both launch and
+focus integration. The installed package passed its 221-entry integrity
+check. Temporary test desktop entries and shell instrumentation were removed.

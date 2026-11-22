@@ -1,0 +1,184 @@
+{
+  "unit": "ms from shared launcher invocation to Hyprland openwindow",
+  "device": "Fire HD 10 2021 (trona)",
+  "samples": [
+    {
+      "mode": "gtk",
+      "route": "grid",
+      "app": "Trona QA Spaced",
+      "map_ms": 392,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "grid",
+      "app": "Trona QA Spaced",
+      "map_ms": 346,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "grid",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 1639,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "grid",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 371,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "dock",
+      "app": "Trona QA Spaced",
+      "map_ms": 422,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "dock",
+      "app": "Trona QA Spaced",
+      "map_ms": 346,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "dock",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 463,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "dock",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 391,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "grid",
+      "app": "Trona QA Spaced",
+      "map_ms": 334,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "grid",
+      "app": "Trona QA Spaced",
+      "map_ms": 403,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "grid",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 354,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "grid",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 510,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "dock",
+      "app": "Trona QA Spaced",
+      "map_ms": 336,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "dock",
+      "app": "Trona QA Spaced",
+      "map_ms": 399,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "dock",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 346,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "dock",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 480,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "grid",
+      "app": "Trona QA Spaced",
+      "map_ms": 420,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "grid",
+      "app": "Trona QA Spaced",
+      "map_ms": 330,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "grid",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 438,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "grid",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 352,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "dock",
+      "app": "Trona QA Spaced",
+      "map_ms": 400,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "dock",
+      "app": "Trona QA Spaced",
+      "map_ms": 373,
+      "focus": true
+    },
+    {
+      "mode": "gtk",
+      "route": "dock",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 495,
+      "focus": true
+    },
+    {
+      "mode": "fast",
+      "route": "dock",
+      "app": "org.gnome.Nautilus",
+      "map_ms": 342,
+      "focus": true
+    }
+  ],
+  "median_ms": {
+    "Trona QA Spaced": {
+      "gtk": 401.5,
+      "fast": 341.0
+    },
+    "org.gnome.Nautilus": {
+      "gtk": 487.5,
+      "fast": 353.0
+    }
+  }
+}

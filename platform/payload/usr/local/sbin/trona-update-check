@@ -120,9 +120,9 @@ def integration_check():
  if Path('/etc/systemd/system/serial-getty@ttyGS0.service.d/autologin.conf').exists():fail('Legacy serial autologin returned')
  checks={
  '/usr/bin/omarchy-cmd-browser-handoff':'|--no-first-run|--force-renderer-accessibility=form-controls',
- '/usr/share/omarchy/shell/services/AppLibrary.qml':'// Trona app responsiveness v1',
+ '/usr/share/omarchy/shell/services/AppLibrary.qml':'// Trona desktop entry launch v2',
  '/usr/share/omarchy/shell/plugins/dock/DockWindow.qml':'// Trona dock hold and dismiss v1',
- '/usr/share/omarchy/shell/plugins/dock/Dock.qml':'// Trona app responsiveness v1',
+ '/usr/share/omarchy/shell/plugins/dock/Dock.qml':'// Trona dock focus order v2',
  '/usr/share/omarchy/shell/Ui/KeyboardPanel.qml':'WlrLayershell.layer: WlrLayer.Top',
  '/usr/share/omarchy/shell/plugins/bar/Bar.qml':'readonly property bool layoutLocked:',
  '/usr/share/omarchy/shell/plugins/dock/AppGrid.qml':'// Swiping scrolls the app list;',

@@ -140,10 +140,46 @@ spaces for its desktop file and visible label. The grid launched it, then
 a simulated touch on the Files dock icon opened Nautilus in front of it.
 Returning to an already-open, maximized Files window exposed a separate
 ordering issue with a floating window. The Dock now raises the selected
-window before assigning focus. Three consecutive touch selections brought
-the same Files window back to the front.
+window before assigning focus. Three consecutive touch selections focused
+the same Files window according to Hyprland. The scanout measurement below
+checks what was visible on the panel path.
 
 The package transaction verified the platform and the shell was restarted
 without rebooting the tablet. The update hook reapplies both launch and
 focus integration. The installed package passed its 221-entry integrity
 check. Temporary test desktop entries and shell instrumentation were removed.
+
+## Switching between open apps from the Dock
+
+On the Fire HD 10, switching from a floating Foot terminal to maximized
+Files (Nautilus) assigned keyboard focus but left the terminal covering
+Files in all eight baseline trials. It was still covering Files at the
+1.5-second timeout. After each timeout we exposed the reference window
+again before testing the reverse direction. Version 2026.11.22-3 lowers
+eligible workspace-managed floating windows when selecting a maximized
+tiled app on the tablet, then assigns focus in the same Hyprland dispatch.
+All 16 switches with the fix passed in the comparison session.
+
+The following medians come from a second run with the installed Dock and
+its normal render settings. Each row includes eight switches. Both apps
+were already open.
+
+| Target | Release to focus | Release to all 528 marker pixels | Release to full pixel match | Touch-down to full pixel match |
+| --- | ---: | ---: | ---: | ---: |
+| Foot terminal | 5.2 ms | 42.7 ms | 94.2 ms | 174.3 ms |
+| Files | 5.4 ms | 34.0 ms | 124.6 ms | 204.7 ms |
+
+A virtual touchscreen tapped the actual Dock icons with an 80 ms hold.
+We captured an unobscured reference for each app, sampled changed pixels
+across the client including the last differing scanline, then compared
+the complete 1164 × 1730 pixel client area against that reference in the
+display scanout buffer. A mismatch triggered another read. Full verification
+times include readback and are upper bounds for the complete digital image.
+Optical LCD response was outside the measurement.
+
+Hyprland's alternative render scheduling passed all 16 switches, but the
+median full verification took 122 ms versus 112 ms with normal scheduling.
+The tablet retains normal scheduling. The clearest improvement here is the
+reliable transition to a previously obscured app.
+
+[Individual timing samples](evidence/app-switch-2026-11-22.json)

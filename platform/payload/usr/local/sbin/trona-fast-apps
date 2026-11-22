@@ -53,8 +53,11 @@ def patch_dock(s):
     # neighbor. Leave explicit focus as the last compositor operation.
     focus = '      Hyprland.dispatch("hl.dsp.focus({ " + target + " })")'
     raise_window = r'      Hyprland.dispatch("hl.dsp.window.alter_zorder({ mode = \"top\", " + target + " })")'
-    return transform(s, [(focus + '\n' + raise_window, raise_window + '\n' + focus)],
-                     '// Trona dock focus order v2')
+    ordered = raise_window + '\n' + focus
+    s = transform(s, [(focus + '\n' + raise_window, ordered)], '// Trona dock focus order v2')
+    dispatch = '      Hyprland.dispatch("trona_dock_focus(" + JSON.stringify("address:" + address) + ")")'
+    return transform(s, [(ordered, dispatch)], '// Trona dock visible focus v3')
+
 
 def patch_dock_window(s):
     button = """      TronaNavButton {

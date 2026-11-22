@@ -22,7 +22,8 @@ class FastApps(unittest.TestCase):
  def test_native_focus_only_for_non_minimized_windows(self):
   out=m.patch_dock(DOCK)
   self.assertIn('if (!window.minimized)',out)
-  self.assertLess(out.index('hl.dsp.window.alter_zorder'),out.index('hl.dsp.focus'))
+  self.assertIn('Hyprland.dispatch("trona_dock_focus("',out)
+  self.assertNotIn('alter_zorder',out)
   self.assertEqual(out,m.patch_dock(out))
  def test_changed_second_file_leaves_first_untouched(self):
   with tempfile.TemporaryDirectory() as d:

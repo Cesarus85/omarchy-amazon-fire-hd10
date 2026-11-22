@@ -33,7 +33,7 @@ Controls.ToolButton {
     }
     return ""
   }
-  onPressed: if (closeWindow) pressedAddress = activeAddress()
+  onPressed: pressedAddress = activeAddress()
   onClicked: {
     if (!closeWindow) {
       back()

@@ -56,9 +56,15 @@ Hold an app icon in the dock for about half a second to open its menu. Choose
 **Remove from dock** to unpin the app, or **Keep in dock** to pin a running
 app. A running app remains visible until its last window closes.
 
-- **←** sends Escape to the focused app. In the app grid the arrow is beside
-  the search field. It dismisses an open app menu, clears a search, or returns
-  to the desktop.
+- **←** goes back one history entry on a Chrome page or in the Files
+  (Nautilus) directory view. For example, moving between two sibling
+  directories and tapping Back returns to the first sibling. An open Chrome
+  find bar, Files search, menu or dialog gets Escape first. Editable fields
+  also get Escape, so tapping Back while editing cannot navigate away from a
+  form. A website controls how its own fields respond to Escape. The separate
+  GTK portal file chooser receives a cancel request addressed to its own window.
+  Other apps keep the Escape action. The app grid handles Back locally:
+  it dismisses its menu, clears its filter or returns to the desktop.
 - **×** asks the active window to close. Applications can prompt to save.
   The app grid has its own Back button so a window underneath stays safe.
 
@@ -76,6 +82,15 @@ fullscreen app can use the entire screen. When the row fills up, swipe the
 app icons sideways. On the screen keyboard, **Super**, **Alt**, then **W**
 also closes the active window. On a hardware keyboard, hold both modifiers
 while pressing W.
+
+The contextual Back action was tested on the reference device on November 22,
+2026 using touchscreen events delivered to the installed Dock. In Chrome,
+the first tap closed Find on the second local page and the next tap returned
+to the first. The browser menu, a web dialog, and the native Open File chooser
+each closed while the page remained. In Files the search and menu closed in
+place, and a separate tap returned to the previous sibling directory. A web
+input also received Escape after the bottom-edge gesture revealed the Dock
+below the automatic keyboard. A stale window address produced no action.
 
 ## Tablet control center
 

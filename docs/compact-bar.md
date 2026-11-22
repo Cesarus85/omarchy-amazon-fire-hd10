@@ -51,10 +51,18 @@ display. The remaining status icons share the control-center touch target.
 
 The built-in display uses Omarchy's bottom dock for navigation. Tap the nine
 dots to open the app grid, or tap an app icon to open or switch to that app.
-The two icons at the right use the same touch target size as the app icons.
+The navigation buttons at the right use the same touch target size as the app icons.
 Hold an app icon in the dock for about half a second to open its menu. Choose
 **Remove from dock** to unpin the app, or **Keep in dock** to pin a running
 app. A running app remains visible until its last window closes.
+
+- **Two overlapping windows** opens the window overview. Each card shows the
+  window title and a snapshot of its contents. Tap the card you want. Tapping
+  an app icon with several open windows shows just that app’s cards. An app
+  with one open window still comes straight to the front. Hold an icon for
+  the pin menu as before. In the overview, swipe through the cards or tap
+  **×** to return without switching. With the keyboard visible, swipe up from
+  the dock grip first.
 
 - **←** goes back one history entry on a Chrome page or in the Files
   (Nautilus) directory view. For example, moving between two sibling

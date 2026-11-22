@@ -136,6 +136,7 @@ def integration_check():
  for path,marker in checks.items():
   if marker not in Path(path).read_text():fail('Tablet-Integration fehlt: '+path)
  if 'TronaControlCenter {' not in Path('/usr/share/omarchy/shell/plugins/bar/Bar.qml').read_text():fail('Tablet control center missing')
+ if '// Trona window overview v1' not in Path('/usr/share/omarchy/shell/plugins/dock/DockWindow.qml').read_text():fail('Tablet window overview missing')
  if '// Trona context back v1' not in Path('/usr/share/omarchy/shell/plugins/dock/DockWindow.qml').read_text():fail('Tablet dock back action missing')
  if '// Trona app grid back button v1' not in Path('/usr/share/omarchy/shell/plugins/dock/AppGrid.qml').read_text():fail('App-grid navigation missing')
  if 'dofile("/usr/share/trona-platform/hypr/trona-windows.lua")' not in (HOME/'.config/hypr/hyprland.lua').read_text():fail('Tablet window rules missing')

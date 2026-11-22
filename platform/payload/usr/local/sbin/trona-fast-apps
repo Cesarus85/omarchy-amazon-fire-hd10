@@ -155,10 +155,46 @@ def patch_dock_window(s):
         ('      if (appSlot.dragged) {', '      if (appSlot.heldForMenu || appSlot.dragged) {'),
     ], '// Trona dock hold and dismiss v1')
 
-    return transform(s, [
+    s = transform(s, [
         ('else Quickshell.execDetached(["/usr/bin/wtype", "-k", "Escape"])',
          'else if (pressedAddress === activeAddress()) Quickshell.execDetached(["/usr/local/libexec/trona_dock_back.py", pressedAddress])')
     ], '// Trona context back v1')
+
+    return transform(s, [
+        ('  property var dock: null', '''  property var dock: null
+  TronaWindowOverview { id: overview; screen: window.screen; dock: window.dock }'''),
+        ('window.tabletDock ? 4 : 2', 'window.tabletDock ? 5 : 2'),
+        ('window.width - 3 * window.slotSize', 'window.width - 4 * window.slotSize'),
+        ('      TronaNavButton {\n        visible: window.tabletDock\n        width: window.slotSize\n        height: window.slotSize\n        onBack:', '''      Slot {
+        visible: window.tabletDock
+        Accessible.role: Accessible.Button
+        Accessible.name: "Fensterübersicht"
+        Accessible.onPressAction: overview.open("")
+        mouse.onClicked: { window.closeMenu(); overview.open("") }
+        Item {
+          anchors.centerIn: parent
+          width: window.iconSize * 0.72; height: width
+          Repeater {
+            model: 2
+            Rectangle {
+              required property int index
+              x: index * parent.width * 0.22; y: index * parent.height * 0.22
+              width: parent.width * 0.76; height: parent.height * 0.67
+              radius: 3; border.width: 2; border.color: Commons.Color.foreground
+              color: Commons.Color.background
+            }
+          }
+        }
+      }
+      TronaNavButton {
+        visible: window.tabletDock
+        width: window.slotSize
+        height: window.slotSize
+        onBack:'''),
+        ('      else window.dock.activate(appSlot.modelData)',
+         '      else if (window.tabletDock && appSlot.windowCount > 1) overview.open(appSlot.modelData.key)\n'
+         '      else window.dock.activate(appSlot.modelData)'),
+    ], '// Trona window overview v1')
 
 
 def patch_grid_back(s):

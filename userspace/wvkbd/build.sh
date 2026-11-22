@@ -10,5 +10,6 @@ cd "$out"
 patch --batch -p1 < "$here/wvkbd-trona.patch"
 patch --batch -p1 < "$here/wvkbd-ime-keymap.patch"
 patch --batch -p1 < "$here/wvkbd-symbols.patch"
+patch --batch -p1 < "$here/wvkbd-text-edit.patch"
 make -j"${JOBS:-4}" LAYOUT=mobintl
 printf 'Built %s/wvkbd-mobintl; not installed.\n' "$out"

@@ -127,3 +127,24 @@ file, then save a new file in a temporary folder. Repeat both dialogs with
 **Abbrechen**. In the package picker, filter the list, select two packages,
 expand the details and cancel. This exercises the touch layout without
 installing software.
+
+## Selecting, copying and pasting text
+
+Platform **2026.11.22-7** adds **Text** beside **123** on the desktop keyboard
+in both orientations. Long-press a word in Chrome and drag a selection handle
+to the end of the address or passage. On a read-only page, use the keyboard
+button in the top bar to show the keyboard. Tap **Text → Kopieren**, switch to
+the destination app, tap its text field and choose **Einfügen** on the Text page.
+If the keyboard has reopened on the letters, tap **Text** again.
+
+In a text field, **Auswahl ← / →** moves the active end of the selection one
+character at a time. **Wort ← / →** moves it by a word. **Alles markieren**
+selects the field's contents, the plain arrows move the cursor and **ABC**
+returns to typing. The keyboard sends standard edit shortcuts to the focused
+app. Copy uses Ctrl+Insert, paste uses Ctrl+V. Terminal emulators and apps
+with custom key bindings may use other shortcuts. The keyboard stores no
+clipboard history.
+
+For a source installation, rebuild wvkbd with `userspace/wvkbd/build.sh`
+and pass the new binary to `scripts/stage-platform.py --keyboard` when
+preparing the platform package.

@@ -1,0 +1,90 @@
+--- a/layout.mobintl.h
++++ b/layout.mobintl.h
+@@ -65,6 +65,7 @@
+ 	ComposeCyrG,
+ 	ComposeCyrK,
+ 	Symbols,
++	TextEdit,
+ 	Index,
+ 	NumLayouts,
+ };
+@@ -82,13 +83,14 @@
+   keys_compose_cyr_i[], keys_compose_cyr_j[], keys_compose_cyr_e[],
+   keys_compose_cyr_u[], keys_compose_cyr_l[], keys_compose_cyr_n[],
+   keys_compose_cyr_tse[], keys_compose_cyr_che[], keys_compose_cyr_g[],
+-  keys_compose_cyr_k[], keys_dialer[], keys_index[], keys_symbols[];
++  keys_compose_cyr_k[], keys_dialer[], keys_index[], keys_symbols[], keys_text_edit[];
+ 
+ static struct layout layouts[NumLayouts] = {
+   [Full] = {keys_full, "latin", "full", true}, // second parameter is the keymap name
+                                          // third parameter is the layout name
+ 										 // last parameter indicates if it's an alphabetical/primary layout
+   [FullWide] = {keys_full_wide, "latin", "fullwide", true},
++  [TextEdit] = {keys_text_edit, "latin", "textedit", false},
+   [Symbols] = {keys_symbols, "latin", "symbols", false},
+   [Special] = {keys_special, "latin", "special", false},
+   [SpecialPad] = {keys_specialpad, "latin", "specialpad", false},
+@@ -236,6 +238,7 @@
+   {"", "", 0.0, EndRow},
+ 
+   {"123", "123", 1.5, NextLayer, .scheme = 1},
++  {"Text", "Text", 1.0, Layout, 0, &layouts[TextEdit], .scheme = 1},
+   {"Cmp", "Cmp", 1.0, Compose, .scheme = 1},
+   {"Super", "Super", 1.0, Mod, Super, .scheme = 1},
+   {"Alt", "Alt", 1.0, Mod, Alt, .scheme = 1},
+@@ -312,6 +315,7 @@
+   {"", "", 0.0, EndRow},
+ 
+   {"123", "123", 1.5, NextLayer, .scheme = 1},
++  {"Text", "Text", 1.0, Layout, 0, &layouts[TextEdit], .scheme = 1},
+   {"Cmp", "Cmp", 1.0, Compose, .scheme = 1},
+   {"Super", "Super", 1.0, Mod, Super, .scheme = 1},
+   {"Alt", "Alt", 1.0, Mod, Alt, .scheme = 1},
+@@ -1156,6 +1160,7 @@
+   {"", "", 0.0, EndRow},
+ 
+   {"123", "123", 1.0, NextLayer, .scheme = 1},
++  {"Text", "Text", 1.0, Layout, 0, &layouts[TextEdit], .scheme = 1},
+   {"Cmp", "Cmp", 1.0, Compose, .scheme = 1},
+   {"Super", "Super", 1.0, Mod, Super, .scheme = 1},
+   {"Alt", "Alt", 1.0, Mod, Alt, .scheme = 1},
+@@ -1765,3 +1770,25 @@
+   {"Enter", "Enter", 2.0, Code, KEY_ENTER, .scheme = 1},
+   {"", "", 0.0, Last},
+ };
++
++/* The application owns selection and clipboard data. Ctrl+Insert copies
++ * without sending an interrupt when a terminal has focus. */
++static struct key keys_text_edit[] = {
++  {"Alles markieren", "Alles markieren", 1.0, Code, KEY_A, .code_mod = Ctrl, .reset_mod = true},
++  {"Kopieren", "Kopieren", 1.0, Code, KEY_INSERT, .code_mod = Ctrl, .reset_mod = true},
++  {"Einfügen", "Einfügen", 1.0, Code, KEY_V, .code_mod = Ctrl, .reset_mod = true},
++  {"", "", 0.0, EndRow},
++
++  {"Auswahl ←", "Auswahl ←", 1.0, Code, KEY_LEFT, .code_mod = Shift, .reset_mod = true},
++  {"Auswahl →", "Auswahl →", 1.0, Code, KEY_RIGHT, .code_mod = Shift, .reset_mod = true},
++  {"", "", 0.0, EndRow},
++
++  {"Wort ←", "Wort ←", 1.0, Code, KEY_LEFT, .code_mod = Ctrl | Shift, .reset_mod = true},
++  {"Wort →", "Wort →", 1.0, Code, KEY_RIGHT, .code_mod = Ctrl | Shift, .reset_mod = true},
++  {"", "", 0.0, EndRow},
++
++  {"ABC", "ABC", 1.0, BackLayer, .scheme = 1},
++  {"←", "←", 1.0, Code, KEY_LEFT},
++  {"→", "→", 1.0, Code, KEY_RIGHT},
++  {"", "", 0.0, Last},
++};
+--- a/keyboard.c
++++ b/keyboard.c
+@@ -318,6 +318,11 @@
+             }
+         }
+ 
++        /* A per-key shortcut owns its modifiers only until key-up. */
++        if (kb->last_press->type == Code && kb->last_press->code_mod) {
++            zwp_virtual_keyboard_v1_modifiers(kb->vkbd, kb->mods, 0, 0, 0);
++        }
++
+         if (kb->compose >= 2) {
+             kb->compose = 0;
+             kbd_switch_layout(kb, kb->last_abc_layout, kb->last_abc_index);

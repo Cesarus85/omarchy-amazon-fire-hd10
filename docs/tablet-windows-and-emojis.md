@@ -131,7 +131,7 @@ installing software.
 ## Selecting, copying and pasting text
 
 Platform **2026.11.22-7** adds **Text** beside **123** on the desktop keyboard
-in both orientations. Long-press a word in Chrome and drag a selection handle
+in both orientations. On a Chrome webpage, long-press a word and drag a selection handle
 to the end of the address or passage. On a read-only page, use the keyboard
 button in the top bar to show the keyboard. Tap **Text → Kopieren**, switch to
 the destination app, tap its text field and choose **Einfügen** on the Text page.
@@ -144,6 +144,14 @@ returns to typing. The keyboard sends standard edit shortcuts to the focused
 app. Copy uses Ctrl+Insert, paste uses Ctrl+V. Terminal emulators and apps
 with custom key bindings may use other shortcuts. The keyboard stores no
 clipboard history.
+
+To copy the current **Chrome address bar** from version **2026.11.22-8**,
+open the keyboard and tap **Text → URL markieren → Kopieren**. This focuses
+Chrome’s address bar and selects the complete URL, including the scheme, query
+and fragment. If a long press has opened Chrome’s context menu, dismiss it
+first. To copy just a suffix, tap **URL markieren**, then the plain **→**
+to place the caret at the end. Tap **Auswahl ←** for each character you want
+to include, then **Kopieren**.
 
 For a source installation, rebuild wvkbd with `userspace/wvkbd/build.sh`
 and pass the new binary to `scripts/stage-platform.py --keyboard` when

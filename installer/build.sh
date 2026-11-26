@@ -72,6 +72,8 @@ bsdtar --numeric-owner --exclude .PKGINFO --exclude .BUILDINFO --exclude .MTREE 
 python3 /src/installer/finalize-root.py "$root" /output
 chroot "$root" depmod 6.18.56-trona-arch14
 chroot "$root" visudo -cf /etc/sudoers.d/00-trona-admin
+# The Omarchy service owns tty1; keep the separate USB serial getty.
+chroot "$root" systemctl mask getty@tty1.service
 chroot "$root" systemctl enable seatd trona-desktop trona-boot-guard trona-radio-platform \
   trona-wmt trona-wifi trona-bluetooth bluetooth NetworkManager trona-battery \
   trona-cpufreq-policy trona-standby trona-usb-network serial-getty@ttyGS0

@@ -41,7 +41,8 @@ for i in $(seq 1 20); do [ -b /dev/mmcblk0p18 ] && break; sleep 1; done
 # Keep every firmware/boot partition read-only. Only the selected root is writable.
 for b in /dev/mmcblk0p* /dev/mmcblk0boot*; do [ -b "$b" ] && blockdev --setro "$b"; done
 mkdir -p /hostdata /newroot
-blkid /dev/mmcblk0p18 | grep -q 'UUID="@ROOT_UUID@"' || fail 'Unexpected root UUID'
+root_uuid=$(/fsck/lib/ld-linux-aarch64.so.1 --library-path /fsck/lib /fsck/bin/blkid -s UUID -o value /dev/mmcblk0p18) || fail 'Cannot read root UUID'
+[ "$root_uuid" = '@ROOT_UUID@' ] || fail 'Unexpected root UUID'
 [ "$(blockdev --getsize64 /dev/mmcblk0p18)" = @ROOT_BYTES@ ] || fail 'Unexpected root size'
 blockdev --setrw /dev/mmcblk0p18
 /fsck/lib/ld-linux-aarch64.so.1 --library-path /fsck/lib /fsck/bin/e2fsck -p /dev/mmcblk0p18

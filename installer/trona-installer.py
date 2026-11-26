@@ -414,8 +414,9 @@ def install(args):
         # Persist the stage BEFORE the first disk write; there is no blind retry/resume.
         save(out/'install-state.json', {'stage': 'writing-gpt', 'automatic_resume': False})
         mutated = True
-        dev.shell(f'dd if=/tmp/trona-install/gpt-secondary.new of={DISK} bs=512 seek={DISK_BYTES//512-33} conv=notrunc && sync')
-        dev.shell(f'dd if=/tmp/trona-install/gpt-primary.new of={DISK} bs=512 conv=notrunc && sync')
+        # TWRP's standalone dd is built without conv=notrunc.
+        dev.shell(f'/sbin/toybox dd if=/tmp/trona-install/gpt-secondary.new of={DISK} bs=512 seek={DISK_BYTES//512-33} conv=notrunc && sync')
+        dev.shell(f'/sbin/toybox dd if=/tmp/trona-install/gpt-primary.new of={DISK} bs=512 conv=notrunc && sync')
         dev.shell(tool+'blockdev --rereadpt '+DISK)
         require(int(dev.shell(tool+'blockdev --getsize64 '+DISK+'p18')) == ROOT_SECTORS*SECTOR,
                 'Kernel partition table did not update. Stop; do not reboot Android.')

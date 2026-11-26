@@ -27,7 +27,8 @@ add('init',render((repo/'boot/init.template').read_text(),p).encode())
 add('shutdown',(repo/'boot/shutdown').read_bytes())
 add('dev/console',mode=stat.S_IFCHR|0o600,major=5,minor=1)
 add('dev/null',mode=stat.S_IFCHR|0o666,major=1,minor=3)
-fsck=(a.rootfs/'usr/bin/e2fsck').read_bytes();arm_elf(fsck);add('fsck/bin/e2fsck',fsck)
+for name in ('blkid','e2fsck'):
+ data=(a.rootfs/'usr/bin'/name).read_bytes();arm_elf(data);add('fsck/bin/'+name,data)
 for lib in ['libext2fs.so.2','libcom_err.so.2','libblkid.so.1','libuuid.so.1','libe2p.so.2','libc.so.6','ld-linux-aarch64.so.1']:
  data=(a.rootfs/'usr/lib'/lib).read_bytes();arm_elf(data);add('fsck/lib/'+lib,data)
 # newc is deterministic, root-owned and has no host metadata.
